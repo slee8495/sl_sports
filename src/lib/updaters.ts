@@ -5,6 +5,7 @@ import { fetchTeamProfile } from "./ai/fetchProfile";
 import { fetchTeamMedia, type TeamMedia } from "./ai/fetchMedia";
 import { fetchTeamSchedule, type TeamSchedule } from "./ai/fetchSchedule";
 import { fetchTeamContent } from "./ai/fetchContent";
+import { fetchTeamStandings } from "./ai/fetchStandings";
 import { filterValidImageUrls, validImageUrl } from "./validateImage";
 import { getTodaysGroupIndex, getTeamGroup } from "./rotation";
 
@@ -192,7 +193,7 @@ export async function updateOneSchedule(team: Team): Promise<UpdateResult> {
 }
 
 // The daily cron path: one combined web-search call per team covering news, highlights,
-// podcasts, and schedule together (see fetchTeamContent) instead of two separate calls.
+// podcasts, and schedule together (see fetchTeamContent) instead of separate calls.
 export async function updateOneContent(team: Team): Promise<UpdateResult> {
   try {
     const content = await fetchTeamContent(team);
@@ -200,20 +201,35 @@ export async function updateOneContent(team: Team): Promise<UpdateResult> {
     await insertHighlights(team.id, content.highlights);
     await insertPodcasts(team.id, content.podcasts);
     await insertGames(team.id, content.games);
-    await db
-      .update(teams)
-      .set({
-        standings: content.standings,
-        isPlayoffs: content.isPlayoffs,
-        playoffBracket: content.isPlayoffs ? content.playoffBracket : [],
-        standingsUpdatedAt: new Date(),
-      })
-      .where(eq(teams.id, team.id));
     await logResult(team.id, "content", true);
     return { team: team.name, ok: true };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     await logResult(team.id, "content", false, message);
+    return { team: team.name, ok: false, error: message };
+  }
+}
+
+// Kept as a separate call from updateOneContent — folding standings/bracket into that
+// already-large combined schema made the model's structured output unreliable (partial/
+// invalid objects, whole update failing). Runs on the same cadence, just as its own call.
+export async function updateOneStandings(team: Team): Promise<UpdateResult> {
+  try {
+    const data = await fetchTeamStandings(team);
+    await db
+      .update(teams)
+      .set({
+        standings: data.standings,
+        isPlayoffs: data.isPlayoffs,
+        playoffBracket: data.isPlayoffs ? data.playoffBracket : [],
+        standingsUpdatedAt: new Date(),
+      })
+      .where(eq(teams.id, team.id));
+    await logResult(team.id, "standings", true);
+    return { team: team.name, ok: true };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    await logResult(team.id, "standings", false, message);
     return { team: team.name, ok: false, error: message };
   }
 }
@@ -237,15 +253,27 @@ export async function runScheduleUpdate(): Promise<UpdateResult[]> {
   return Promise.all(list.map(updateOneSchedule));
 }
 
-export async function runContentUpdate(): Promise<UpdateResult[]> {
+// Manual/admin "refresh everything now" path (?all=true) — also fetches standings so a
+// full backfill covers the same fields as the regular group rotation.
+export async function runContentUpdate(): Promise<(UpdateResult & { teamSlug: string })[]> {
   const list = await allTeams();
-  return Promise.all(list.map(updateOneContent));
+  return Promise.all(list.map(updateOneTeamGroup));
+}
+
+async function updateOneTeamGroup(team: Team): Promise<UpdateResult & { teamSlug: string }> {
+  const [content, standings] = await Promise.all([updateOneContent(team), updateOneStandings(team)]);
+  return {
+    team: team.name,
+    teamSlug: team.slug,
+    ok: content.ok && standings.ok,
+    error: [content.error, standings.error].filter(Boolean).join("; ") || undefined,
+  };
 }
 
 // The daily cron path: teams are split into 3 groups (see src/lib/rotation.ts), and each
 // day refreshes only that day's group — so every team refreshes once every 3 days,
-// instead of refreshing all teams daily. fetchTeamContent's prompt is written to catch up
-// on the ~3-day gap.
+// instead of refreshing all teams daily. fetchTeamContent/fetchTeamStandings' prompts are
+// written to catch up on the ~3-day gap.
 export async function runContentUpdateGroup(): Promise<{
   group: number;
   results: (UpdateResult & { teamSlug: string })[];
@@ -253,11 +281,6 @@ export async function runContentUpdateGroup(): Promise<{
   const list = await allTeams();
   const groupIndex = getTodaysGroupIndex();
   const group = getTeamGroup(list, groupIndex);
-  const results = await Promise.all(
-    group.map(async (team) => {
-      const result = await updateOneContent(team);
-      return { ...result, teamSlug: team.slug };
-    }),
-  );
+  const results = await Promise.all(group.map(updateOneTeamGroup));
   return { group: groupIndex, results };
 }
