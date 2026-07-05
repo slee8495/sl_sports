@@ -1,0 +1,244 @@
+import { db } from "@/db";
+import { teams, players, newsItems, highlights, podcastEpisodes, games, updateLog } from "@/db/schema";
+import { eq, sql } from "drizzle-orm";
+import { fetchTeamProfile } from "./ai/fetchProfile";
+import { fetchTeamMedia, type TeamMedia } from "./ai/fetchMedia";
+import { fetchTeamSchedule, type TeamSchedule } from "./ai/fetchSchedule";
+import { fetchTeamContent } from "./ai/fetchContent";
+import { filterValidImageUrls, validImageUrl } from "./validateImage";
+import { getRotationIndex } from "./rotation";
+
+type Team = typeof teams.$inferSelect;
+export type UpdateResult = { team: string; ok: boolean; error?: string };
+
+function toDate(value: string | null): Date | null {
+  if (!value) return null;
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+async function logResult(teamId: number, kind: string, ok: boolean, error?: string) {
+  await db.insert(updateLog).values({ teamId, kind, success: ok, errorMessage: error });
+}
+
+export async function updateOneProfile(team: Team): Promise<UpdateResult> {
+  try {
+    const profile = await fetchTeamProfile(team);
+
+    const [newLogoUrl, newStadiumPhotos] = await Promise.all([
+      validImageUrl(profile.logoUrl),
+      filterValidImageUrls(profile.stadiumPhotoUrls),
+    ]);
+
+    // Image search/validation is inherently a bit noisy run to run — never let a worse
+    // result (fewer/no images found this time) overwrite images already saved.
+    const logoUrl = newLogoUrl ?? team.logoUrl;
+    const stadiumPhotos = newStadiumPhotos.length > 0 ? newStadiumPhotos : team.stadiumPhotos;
+
+    await db
+      .update(teams)
+      .set({
+        logoUrl,
+        history: profile.history,
+        stadiumName: profile.stadiumName,
+        stadiumDescription: profile.stadiumDescription,
+        stadiumPhotos,
+        stadiumVideoUrl: profile.stadiumVideoUrl ?? team.stadiumVideoUrl,
+        coachName: profile.coachName,
+        coachBio: profile.coachBio,
+        profileUpdatedAt: new Date(),
+      })
+      .where(eq(teams.id, team.id));
+
+    const existingPlayers = await db.select().from(players).where(eq(players.teamId, team.id));
+    const existingPhotoByName = new Map(existingPlayers.filter((p) => p.photoUrl).map((p) => [p.name, p.photoUrl]));
+
+    await db.delete(players).where(eq(players.teamId, team.id));
+    if (profile.players.length > 0) {
+      const playersWithPhotos = await Promise.all(
+        profile.players.map(async (p) => ({
+          teamId: team.id,
+          name: p.name,
+          position: p.position,
+          number: p.number,
+          isStarPlayer: p.isStarPlayer,
+          bio: p.bio,
+          photoUrl: p.isStarPlayer
+            ? (await validImageUrl(p.photoUrl)) ?? existingPhotoByName.get(p.name) ?? null
+            : null,
+        })),
+      );
+      await db.insert(players).values(playersWithPhotos);
+    }
+
+    await logResult(team.id, "profile", true);
+    return { team: team.name, ok: true };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    await logResult(team.id, "profile", false, message);
+    return { team: team.name, ok: false, error: message };
+  }
+}
+
+async function insertNews(teamId: number, news: TeamMedia["news"]) {
+  if (news.length === 0) return;
+  await db
+    .insert(newsItems)
+    .values(
+      news.map((n) => ({
+        teamId,
+        title: n.title,
+        summary: n.summary,
+        url: n.url,
+        source: n.source,
+        publishedAt: toDate(n.publishedAt),
+      })),
+    )
+    .onConflictDoNothing({ target: newsItems.url });
+}
+
+async function insertHighlights(teamId: number, list: TeamMedia["highlights"]) {
+  if (list.length === 0) return;
+  await db
+    .insert(highlights)
+    .values(
+      list.map((h) => ({
+        teamId,
+        title: h.title,
+        videoUrl: h.videoUrl,
+        thumbnailUrl: h.thumbnailUrl,
+        publishedAt: toDate(h.publishedAt),
+      })),
+    )
+    .onConflictDoNothing({ target: highlights.videoUrl });
+}
+
+async function insertPodcasts(teamId: number, list: TeamMedia["podcasts"]) {
+  if (list.length === 0) return;
+  await db
+    .insert(podcastEpisodes)
+    .values(
+      list.map((p) => ({
+        teamId,
+        showName: p.showName,
+        title: p.title,
+        episodeUrl: p.episodeUrl,
+        publishedAt: toDate(p.publishedAt),
+      })),
+    )
+    .onConflictDoNothing({ target: podcastEpisodes.episodeUrl });
+}
+
+async function insertGames(teamId: number, list: TeamSchedule["games"]) {
+  for (const g of list) {
+    const gameTime = new Date(g.gameTime);
+    if (Number.isNaN(gameTime.getTime())) continue;
+
+    await db
+      .insert(games)
+      .values({
+        teamId,
+        opponent: g.opponent,
+        isHome: g.isHome,
+        competition: g.competition,
+        venue: g.venue,
+        gameTime,
+        status: g.status,
+        result: g.result,
+        keyPoints: g.keyPoints,
+      })
+      .onConflictDoUpdate({
+        target: [games.teamId, games.opponent, games.gameTime],
+        set: {
+          competition: g.competition,
+          venue: g.venue,
+          status: g.status,
+          result: g.result,
+          keyPoints: g.keyPoints,
+          fetchedAt: sql`now()`,
+        },
+      });
+  }
+}
+
+// Kept for manual/admin re-triggering of just one aspect (not on any cron).
+export async function updateOneMedia(team: Team): Promise<UpdateResult> {
+  try {
+    const media = await fetchTeamMedia(team);
+    await insertNews(team.id, media.news);
+    await insertHighlights(team.id, media.highlights);
+    await insertPodcasts(team.id, media.podcasts);
+    await logResult(team.id, "media", true);
+    return { team: team.name, ok: true };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    await logResult(team.id, "media", false, message);
+    return { team: team.name, ok: false, error: message };
+  }
+}
+
+// Kept for manual/admin re-triggering of just one aspect (not on any cron).
+export async function updateOneSchedule(team: Team): Promise<UpdateResult> {
+  try {
+    const schedule = await fetchTeamSchedule(team);
+    await insertGames(team.id, schedule.games);
+    await logResult(team.id, "schedule", true);
+    return { team: team.name, ok: true };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    await logResult(team.id, "schedule", false, message);
+    return { team: team.name, ok: false, error: message };
+  }
+}
+
+// The daily cron path: one combined web-search call per team covering news, highlights,
+// podcasts, and schedule together (see fetchTeamContent) instead of two separate calls.
+export async function updateOneContent(team: Team): Promise<UpdateResult> {
+  try {
+    const content = await fetchTeamContent(team);
+    await insertNews(team.id, content.news);
+    await insertHighlights(team.id, content.highlights);
+    await insertPodcasts(team.id, content.podcasts);
+    await insertGames(team.id, content.games);
+    await logResult(team.id, "content", true);
+    return { team: team.name, ok: true };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    await logResult(team.id, "content", false, message);
+    return { team: team.name, ok: false, error: message };
+  }
+}
+
+async function allTeams(): Promise<Team[]> {
+  return db.select().from(teams).orderBy(teams.id);
+}
+
+export async function runProfileUpdate(): Promise<UpdateResult[]> {
+  const list = await allTeams();
+  return Promise.all(list.map(updateOneProfile));
+}
+
+export async function runMediaUpdate(): Promise<UpdateResult[]> {
+  const list = await allTeams();
+  return Promise.all(list.map(updateOneMedia));
+}
+
+export async function runScheduleUpdate(): Promise<UpdateResult[]> {
+  const list = await allTeams();
+  return Promise.all(list.map(updateOneSchedule));
+}
+
+export async function runContentUpdate(): Promise<UpdateResult[]> {
+  const list = await allTeams();
+  return Promise.all(list.map(updateOneContent));
+}
+
+// The daily cron path: only refresh one team/day, rotating through all teams over
+// ~10 days (see src/lib/rotation.ts) — far cheaper than refreshing all teams daily,
+// and fetchTeamContent's prompt is written to catch up on the full ~10-day gap.
+export async function runContentUpdateRotating(): Promise<UpdateResult & { teamSlug: string }> {
+  const list = await allTeams();
+  const team = list[getRotationIndex(list.length)];
+  const result = await updateOneContent(team);
+  return { ...result, teamSlug: team.slug };
+}
