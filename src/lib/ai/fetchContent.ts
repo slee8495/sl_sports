@@ -14,8 +14,8 @@ const contentSchema = z.object({
         publishedAt: z.string().nullable().describe("ISO 8601 date if known"),
       }),
     )
-    .max(8)
-    .describe("Real news articles from roughly the last 10 days about this team"),
+    .max(6)
+    .describe("Real news articles from roughly the last 3 days about this team"),
   highlights: z
     .array(
       z.object({
@@ -25,8 +25,8 @@ const contentSchema = z.object({
         publishedAt: z.string().nullable(),
       }),
     )
-    .max(5)
-    .describe("Real highlight videos from roughly the last 10 days"),
+    .max(4)
+    .describe("Real highlight videos from roughly the last 3 days"),
   podcasts: z
     .array(
       z.object({
@@ -36,8 +36,8 @@ const contentSchema = z.object({
         publishedAt: z.string().nullable(),
       }),
     )
-    .max(5)
-    .describe("Real podcast episodes from roughly the last 10 days discussing this team"),
+    .max(4)
+    .describe("Real podcast episodes from roughly the last 3 days discussing this team"),
   games: z
     .array(
       z.object({
@@ -53,29 +53,70 @@ const contentSchema = z.object({
           .describe("2-4 short bullet points: what to watch for (upcoming) or key takeaways (completed)"),
       }),
     )
-    .max(10)
-    .describe("The next 2-3 upcoming games and every completed game from roughly the last 10 days"),
+    .max(8)
+    .describe("The next 2-3 upcoming games and every completed game from roughly the last 3 days"),
+  standings: z
+    .array(
+      z.object({
+        rank: z.number(),
+        teamName: z.string(),
+        played: z.number().nullable(),
+        wins: z.number().nullable(),
+        losses: z.number().nullable(),
+        draws: z.number().nullable().describe("Ties/draws, only applicable for some sports"),
+        points: z.number().nullable().describe("League points, or null for sports that use win%/GB instead"),
+        gamesBehind: z.string().nullable(),
+        streak: z.string().nullable().describe("e.g. 'W3' or 'L1'"),
+        isThisTeam: z.boolean(),
+      }),
+    )
+    .max(20)
+    .describe(
+      "The current full standings/table for this team's league or division/conference. Only include this team's group, not unrelated divisions.",
+    ),
+  isPlayoffs: z.boolean().describe("True if the league/team is currently in a playoff or postseason bracket stage"),
+  playoffBracket: z
+    .array(
+      z.object({
+        roundName: z.string().describe("e.g. 'Quarterfinals', 'Conference Finals'"),
+        matchups: z
+          .array(
+            z.object({
+              teamA: z.string(),
+              teamB: z.string(),
+              scoreA: z.string().nullable().describe("Games/sets won so far in the series, or score"),
+              scoreB: z.string().nullable(),
+              seriesStatus: z.string().nullable().describe("e.g. 'Team A leads 3-1'"),
+              winner: z.string().nullable().describe("Set once the matchup is decided"),
+            }),
+          )
+          .describe("All matchups in this round"),
+      }),
+    )
+    .max(6)
+    .describe("Only populate if isPlayoffs is true. Leave empty otherwise."),
 });
 
 export type TeamContent = z.infer<typeof contentSchema>;
 
-// This team only gets refreshed once every ~10 days (one team/day, rotating — see
-// src/lib/rotation.ts), so each fetch needs to catch up on the whole gap, not just
-// "latest" — hence the wider windows/limits above compared to a daily-refresh design.
+// Each team refreshes every ~3 days (teams split into 3 groups, one group/day — see
+// src/lib/rotation.ts), so each fetch only needs to catch up on a ~3-day gap.
 export async function fetchTeamContent(team: typeof teams.$inferSelect): Promise<TeamContent> {
   const { output } = await generateText({
     model: MODEL,
     tools: { web_search: webSearchTool(6) },
     stopWhen: isStepCount(8),
     output: Output.object({ schema: contentSchema }),
-    prompt: `This team hasn't been checked in about 10 days. Use web search to catch up on everything real from roughly the last 10 days for the ${team.sport} team "${team.name}" (${team.league ?? ""}):
+    prompt: `This team hasn't been checked in about 3 days. Use web search to catch up on everything real from roughly the last 3 days for the ${team.sport} team "${team.name}" (${team.league ?? ""}):
 
-1. News: all the notable real news articles from the last ~10 days (title, 1-2 sentence summary, real URL, source, published date)
-2. Highlights: real highlight/recap videos from the last ~10 days, preferring official YouTube channels
-3. Podcasts: real podcast episodes from the last ~10 days discussing this team
-4. Schedule: the next 2-3 upcoming games, AND every completed game from the last ~10 days (opponent, home/away, competition, venue, exact date/time in ISO 8601, 2-4 key points each)
+1. News: all the notable real news articles from the last ~3 days (title, 1-2 sentence summary, real URL, source, published date)
+2. Highlights: real highlight/recap videos from the last ~3 days, preferring official YouTube channels
+3. Podcasts: real podcast episodes from the last ~3 days discussing this team
+4. Schedule: the next 2-3 upcoming games, AND every completed game from the last ~3 days (opponent, home/away, competition, venue, exact date/time in ISO 8601, 2-4 key points each)
+5. Standings: the current full league table / division standings that this team is part of (rank, team name, played, wins, losses, draws if applicable, points, games behind, streak). Mark isThisTeam true on this team's row.
+6. Playoffs: if this team's league is currently in a playoff/postseason bracket, set isPlayoffs true and fill in playoffBracket with every round and matchup so far (including this team's). Otherwise set isPlayoffs false and leave playoffBracket empty.
 
-Be efficient with searches, but make sure you cover the full ~10-day gap rather than just the single most recent item. Only include real URLs/facts you found via search, never fabricate.`,
+Be efficient with searches, but make sure you cover the full ~3-day gap rather than just the single most recent item. Only include real URLs/facts you found via search, never fabricate.`,
   });
 
   return output;

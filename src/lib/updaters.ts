@@ -6,7 +6,7 @@ import { fetchTeamMedia, type TeamMedia } from "./ai/fetchMedia";
 import { fetchTeamSchedule, type TeamSchedule } from "./ai/fetchSchedule";
 import { fetchTeamContent } from "./ai/fetchContent";
 import { filterValidImageUrls, validImageUrl } from "./validateImage";
-import { getRotationIndex } from "./rotation";
+import { getTodaysGroupIndex, getTeamGroup } from "./rotation";
 
 type Team = typeof teams.$inferSelect;
 export type UpdateResult = { team: string; ok: boolean; error?: string };
@@ -200,6 +200,15 @@ export async function updateOneContent(team: Team): Promise<UpdateResult> {
     await insertHighlights(team.id, content.highlights);
     await insertPodcasts(team.id, content.podcasts);
     await insertGames(team.id, content.games);
+    await db
+      .update(teams)
+      .set({
+        standings: content.standings,
+        isPlayoffs: content.isPlayoffs,
+        playoffBracket: content.isPlayoffs ? content.playoffBracket : [],
+        standingsUpdatedAt: new Date(),
+      })
+      .where(eq(teams.id, team.id));
     await logResult(team.id, "content", true);
     return { team: team.name, ok: true };
   } catch (err) {
@@ -233,12 +242,22 @@ export async function runContentUpdate(): Promise<UpdateResult[]> {
   return Promise.all(list.map(updateOneContent));
 }
 
-// The daily cron path: only refresh one team/day, rotating through all teams over
-// ~10 days (see src/lib/rotation.ts) — far cheaper than refreshing all teams daily,
-// and fetchTeamContent's prompt is written to catch up on the full ~10-day gap.
-export async function runContentUpdateRotating(): Promise<UpdateResult & { teamSlug: string }> {
+// The daily cron path: teams are split into 3 groups (see src/lib/rotation.ts), and each
+// day refreshes only that day's group — so every team refreshes once every 3 days,
+// instead of refreshing all teams daily. fetchTeamContent's prompt is written to catch up
+// on the ~3-day gap.
+export async function runContentUpdateGroup(): Promise<{
+  group: number;
+  results: (UpdateResult & { teamSlug: string })[];
+}> {
   const list = await allTeams();
-  const team = list[getRotationIndex(list.length)];
-  const result = await updateOneContent(team);
-  return { ...result, teamSlug: team.slug };
+  const groupIndex = getTodaysGroupIndex();
+  const group = getTeamGroup(list, groupIndex);
+  const results = await Promise.all(
+    group.map(async (team) => {
+      const result = await updateOneContent(team);
+      return { ...result, teamSlug: team.slug };
+    }),
+  );
+  return { group: groupIndex, results };
 }

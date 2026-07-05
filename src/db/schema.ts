@@ -38,9 +38,41 @@ export const teams = pgTable("teams", {
   coachName: varchar("coach_name", { length: 128 }),
   coachBio: text("coach_bio"),
 
+  standings: jsonb("standings").$type<StandingsRow[]>().default([]),
+  isPlayoffs: boolean("is_playoffs").default(false).notNull(),
+  playoffBracket: jsonb("playoff_bracket").$type<BracketRound[]>().default([]),
+  standingsUpdatedAt: timestamp("standings_updated_at", { withTimezone: true }),
+
   profileUpdatedAt: timestamp("profile_updated_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
+
+export type StandingsRow = {
+  rank: number;
+  teamName: string;
+  played: number | null;
+  wins: number | null;
+  losses: number | null;
+  draws: number | null;
+  points: number | null;
+  gamesBehind: string | null;
+  streak: string | null;
+  isThisTeam: boolean;
+};
+
+export type BracketMatchup = {
+  teamA: string;
+  teamB: string;
+  scoreA: string | null;
+  scoreB: string | null;
+  seriesStatus: string | null;
+  winner: string | null;
+};
+
+export type BracketRound = {
+  roundName: string;
+  matchups: BracketMatchup[];
+};
 
 export const players = pgTable("players", {
   id: serial("id").primaryKey(),

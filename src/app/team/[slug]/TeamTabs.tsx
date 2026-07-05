@@ -22,13 +22,17 @@ type Props = {
   recent: Game[];
 };
 
-const TABS = ["Overview", "Schedule", "Roster", "News", "Videos", "Podcasts"] as const;
+const TABS = ["Overview", "Standings", "Schedule", "Roster", "News", "Videos", "Podcasts"] as const;
 type Tab = (typeof TABS)[number];
 
 export function TeamTabs({ team, color, roster, news, highlightsList, podcasts, upcoming, recent }: Props) {
   const [tab, setTab] = useState<Tab>("Overview");
 
+  const standings = team.standings ?? [];
+  const bracket = team.isPlayoffs ? (team.playoffBracket ?? []) : [];
+
   const counts: Partial<Record<Tab, number>> = {
+    Standings: standings.length,
     Schedule: upcoming.length + recent.length,
     Roster: roster.length,
     News: news.length,
@@ -115,6 +119,90 @@ export function TeamTabs({ team, color, roster, news, highlightsList, podcasts, 
 
           {!team.history && !team.stadiumName && !team.coachName && (
             <p className="text-sm text-zinc-500">Profile hasn&apos;t been fetched yet — check back after the next daily update.</p>
+          )}
+        </div>
+      )}
+
+      {tab === "Standings" && (
+        <div className="flex flex-col gap-6">
+          {standings.length === 0 && !bracket.length && (
+            <p className="text-sm text-zinc-500">No standings data yet.</p>
+          )}
+
+          {standings.length > 0 && (
+            <div className="overflow-x-auto rounded-xl border border-zinc-200 dark:border-zinc-800">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-zinc-200 text-xs uppercase tracking-wider text-zinc-500 dark:border-zinc-800">
+                    <th className="px-3 py-2 font-medium">#</th>
+                    <th className="px-3 py-2 font-medium">Team</th>
+                    <th className="px-3 py-2 font-medium">P</th>
+                    <th className="px-3 py-2 font-medium">W</th>
+                    <th className="px-3 py-2 font-medium">L</th>
+                    <th className="px-3 py-2 font-medium">D</th>
+                    <th className="px-3 py-2 font-medium">Pts</th>
+                    <th className="px-3 py-2 font-medium">GB</th>
+                    <th className="px-3 py-2 font-medium">Streak</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {standings.map((row) => (
+                    <tr
+                      key={row.rank}
+                      className="border-b border-zinc-100 last:border-0 dark:border-zinc-900"
+                      style={row.isThisTeam ? { backgroundColor: `${color}14` } : undefined}
+                    >
+                      <td className="px-3 py-2 text-zinc-500">{row.rank}</td>
+                      <td className="px-3 py-2 font-medium" style={row.isThisTeam ? { color } : undefined}>
+                        {row.teamName}
+                      </td>
+                      <td className="px-3 py-2">{row.played ?? "–"}</td>
+                      <td className="px-3 py-2">{row.wins ?? "–"}</td>
+                      <td className="px-3 py-2">{row.losses ?? "–"}</td>
+                      <td className="px-3 py-2">{row.draws ?? "–"}</td>
+                      <td className="px-3 py-2">{row.points ?? "–"}</td>
+                      <td className="px-3 py-2 text-zinc-500">{row.gamesBehind ?? "–"}</td>
+                      <td className="px-3 py-2 text-zinc-500">{row.streak ?? "–"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {bracket.length > 0 && (
+            <div>
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">Playoff bracket</h3>
+              <div className="flex flex-col gap-4">
+                {bracket.map((round) => (
+                  <div key={round.roundName}>
+                    <h4 className="mb-1.5 text-sm font-medium">{round.roundName}</h4>
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      {round.matchups.map((m, i) => {
+                        const involvesTeam = m.teamA === team.name || m.teamB === team.name;
+                        return (
+                          <div
+                            key={i}
+                            className={`rounded-xl border p-3 ${involvesTeam ? "" : "border-zinc-200 dark:border-zinc-800"}`}
+                            style={involvesTeam ? { borderColor: color, backgroundColor: `${color}14` } : undefined}
+                          >
+                            <div className="flex items-center justify-between text-sm">
+                              <span className={m.winner === m.teamA ? "font-semibold" : ""}>{m.teamA}</span>
+                              <span className="text-zinc-500">{m.scoreA ?? ""}</span>
+                            </div>
+                            <div className="flex items-center justify-between text-sm">
+                              <span className={m.winner === m.teamB ? "font-semibold" : ""}>{m.teamB}</span>
+                              <span className="text-zinc-500">{m.scoreB ?? ""}</span>
+                            </div>
+                            {m.seriesStatus && <div className="mt-1 text-xs text-zinc-500">{m.seriesStatus}</div>}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
         </div>
       )}
