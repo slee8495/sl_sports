@@ -31,6 +31,21 @@ export function TeamTabs({ team, color, roster, news, highlightsList, podcasts, 
   const standings = team.standings ?? [];
   const bracket = team.isPlayoffs ? (team.playoffBracket ?? []) : [];
 
+  // Group rows by conference/division (row.group), with this team's own group listed
+  // first — falls back to a single ungrouped table for single-table leagues (most soccer).
+  const standingsByGroup = new Map<string | null, typeof standings>();
+  for (const row of standings) {
+    const key = row.group ?? null;
+    const list = standingsByGroup.get(key) ?? [];
+    list.push(row);
+    standingsByGroup.set(key, list);
+  }
+  const standingsGroups = [...standingsByGroup.entries()].sort(([, a], [, b]) => {
+    const aFirst = a.some((r) => r.isThisTeam);
+    const bFirst = b.some((r) => r.isThisTeam);
+    return aFirst === bFirst ? 0 : aFirst ? -1 : 1;
+  });
+
   const counts: Partial<Record<Tab, number>> = {
     Standings: standings.length,
     Schedule: upcoming.length + recent.length,
@@ -129,46 +144,51 @@ export function TeamTabs({ team, color, roster, news, highlightsList, podcasts, 
             <p className="text-sm text-zinc-500">No standings data yet.</p>
           )}
 
-          {standings.length > 0 && (
-            <div className="overflow-x-auto rounded-xl border border-zinc-200 dark:border-zinc-800">
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-zinc-200 text-xs uppercase tracking-wider text-zinc-500 dark:border-zinc-800">
-                    <th className="px-3 py-2 font-medium">#</th>
-                    <th className="px-3 py-2 font-medium">Team</th>
-                    <th className="px-3 py-2 font-medium">P</th>
-                    <th className="px-3 py-2 font-medium">W</th>
-                    <th className="px-3 py-2 font-medium">L</th>
-                    <th className="px-3 py-2 font-medium">D</th>
-                    <th className="px-3 py-2 font-medium">Pts</th>
-                    <th className="px-3 py-2 font-medium">GB</th>
-                    <th className="px-3 py-2 font-medium">Streak</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {standings.map((row) => (
-                    <tr
-                      key={row.rank}
-                      className="border-b border-zinc-100 last:border-0 dark:border-zinc-900"
-                      style={row.isThisTeam ? { backgroundColor: `${color}14` } : undefined}
-                    >
-                      <td className="px-3 py-2 text-zinc-500">{row.rank}</td>
-                      <td className="px-3 py-2 font-medium" style={row.isThisTeam ? { color } : undefined}>
-                        {row.teamName}
-                      </td>
-                      <td className="px-3 py-2">{row.played ?? "–"}</td>
-                      <td className="px-3 py-2">{row.wins ?? "–"}</td>
-                      <td className="px-3 py-2">{row.losses ?? "–"}</td>
-                      <td className="px-3 py-2">{row.draws ?? "–"}</td>
-                      <td className="px-3 py-2">{row.points ?? "–"}</td>
-                      <td className="px-3 py-2 text-zinc-500">{row.gamesBehind ?? "–"}</td>
-                      <td className="px-3 py-2 text-zinc-500">{row.streak ?? "–"}</td>
+          {standingsGroups.map(([groupName, rows]) => (
+            <div key={groupName ?? "__all__"}>
+              {groupName && (
+                <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-zinc-500">{groupName}</h3>
+              )}
+              <div className="overflow-x-auto rounded-xl border border-zinc-200 dark:border-zinc-800">
+                <table className="w-full text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-zinc-200 text-xs uppercase tracking-wider text-zinc-500 dark:border-zinc-800">
+                      <th className="px-3 py-2 font-medium">#</th>
+                      <th className="px-3 py-2 font-medium">Team</th>
+                      <th className="px-3 py-2 font-medium">P</th>
+                      <th className="px-3 py-2 font-medium">W</th>
+                      <th className="px-3 py-2 font-medium">L</th>
+                      <th className="px-3 py-2 font-medium">D</th>
+                      <th className="px-3 py-2 font-medium">Pts</th>
+                      <th className="px-3 py-2 font-medium">GB</th>
+                      <th className="px-3 py-2 font-medium">Streak</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {rows.map((row, i) => (
+                      <tr
+                        key={i}
+                        className="border-b border-zinc-100 last:border-0 dark:border-zinc-900"
+                        style={row.isThisTeam ? { backgroundColor: `${color}14` } : undefined}
+                      >
+                        <td className="px-3 py-2 text-zinc-500">{row.rank}</td>
+                        <td className="px-3 py-2 font-medium" style={row.isThisTeam ? { color } : undefined}>
+                          {row.teamName}
+                        </td>
+                        <td className="px-3 py-2">{row.played ?? "–"}</td>
+                        <td className="px-3 py-2">{row.wins ?? "–"}</td>
+                        <td className="px-3 py-2">{row.losses ?? "–"}</td>
+                        <td className="px-3 py-2">{row.draws ?? "–"}</td>
+                        <td className="px-3 py-2">{row.points ?? "–"}</td>
+                        <td className="px-3 py-2 text-zinc-500">{row.gamesBehind ?? "–"}</td>
+                        <td className="px-3 py-2 text-zinc-500">{row.streak ?? "–"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          )}
+          ))}
 
           {bracket.length > 0 && (
             <div>

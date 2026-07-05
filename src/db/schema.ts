@@ -49,6 +49,7 @@ export const teams = pgTable("teams", {
 
 export type StandingsRow = {
   rank: number;
+  group: string | null;
   teamName: string;
   played: number | null;
   wins: number | null;
