@@ -370,8 +370,6 @@ export function TeamTabs({ team, color, roster, news, highlightsList, podcasts, 
             <a
               key={p.id}
               href={p.episodeUrl}
-              target="_blank"
-              rel="noopener noreferrer"
               className="rounded-xl border border-zinc-200 bg-white p-3 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-950"
             >
               <div className="text-sm font-medium">{p.title}</div>
