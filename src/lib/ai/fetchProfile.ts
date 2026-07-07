@@ -1,6 +1,7 @@
 import { generateText, Output, isStepCount } from "ai";
 import { z } from "zod";
 import { MODEL, webSearchTool } from "./model";
+import { retry } from "./retry";
 import type { teams } from "@/db/schema";
 
 const profileSchema = z.object({
@@ -42,12 +43,13 @@ const profileSchema = z.object({
 export type TeamProfile = z.infer<typeof profileSchema>;
 
 export async function fetchTeamProfile(team: typeof teams.$inferSelect): Promise<TeamProfile> {
-  const { output } = await generateText({
-    model: MODEL,
-    tools: { web_search: webSearchTool(6) },
-    stopWhen: isStepCount(8),
-    output: Output.object({ schema: profileSchema }),
-    prompt: `Research the current, up-to-date profile for the ${team.sport} team "${team.name}" (${team.league ?? ""}, ${team.country ?? ""}).
+  return retry(async () => {
+    const { output } = await generateText({
+      model: MODEL,
+      tools: { web_search: webSearchTool(10) },
+      stopWhen: isStepCount(14),
+      output: Output.object({ schema: profileSchema }),
+      prompt: `Research the current, up-to-date profile for the ${team.sport} team "${team.name}" (${team.league ?? ""}, ${team.country ?? ""}).
 
 Use web search to find real, current information:
 - Official team logo/crest: a direct image URL (search Wikipedia/Wikimedia Commons for the team, e.g. "site:commons.wikimedia.org ${team.name} logo")
@@ -56,8 +58,11 @@ Use web search to find real, current information:
 - Current head coach/manager, with a short bio
 - Current roster (as many players as you can confirm), with position and jersey number, marking the 3-5 biggest star players. For those star players only, also find a direct photo URL (prefer Wikipedia/Wikimedia Commons).
 
-Only include facts and URLs you actually found via search — never guess or construct a plausible-looking URL. It is fine to leave logoUrl, stadiumVideoUrl, or a player's photoUrl as null if you can't find a real one.`,
-  });
+For any Wikimedia Commons image, the URL you output MUST be the direct file link in the exact form https://commons.wikimedia.org/wiki/Special:FilePath/<file name>.<ext> (this serves the raw image). Do NOT output the file's description page (https://commons.wikimedia.org/wiki/File:<file name>.<ext>) — that is an HTML page, not an image, and will not display.
 
-  return output;
+Only include facts and URLs you actually found via search — never guess or construct a plausible-looking URL. It is fine to leave logoUrl, stadiumVideoUrl, or a player's photoUrl as null if you can't find a real one.`,
+    });
+
+    return output;
+  });
 }
