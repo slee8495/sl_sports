@@ -74,7 +74,9 @@ export async function fetchTeamContent(team: typeof teams.$inferSelect): Promise
 3. Podcasts: real podcast episodes from the last ~3 days discussing this team
 4. Schedule: the next 2-3 upcoming games, AND every completed game from the last ~3 days (opponent, home/away, competition, venue, exact date/time in ISO 8601, 2-4 key points each)
 
-Be efficient with searches, but make sure you cover the full ~3-day gap rather than just the single most recent item. Only include real URLs/facts you found via search, never fabricate.`,
+Be efficient with searches, but make sure you cover the full ~3-day gap rather than just the single most recent item. Only include real URLs/facts you found via search, never fabricate.
+
+This team is based in ${team.country ?? "an unspecified country"}. If local coverage of this team is mainly in a language other than English (e.g. Korean, Japanese), actively search using local-language queries too and include native-language sources (news outlets, YouTube channels, podcasts) — don't limit yourself to English-language results. Keep titles and summaries in their original language exactly as published; do not translate them to English.`,
   });
 
   return output;

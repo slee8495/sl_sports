@@ -54,7 +54,9 @@ export async function fetchTeamMedia(team: typeof teams.$inferSelect): Promise<T
 2. Highlights: the latest 2-4 real highlight/recap videos, preferring official YouTube channels (league or team)
 3. Podcasts: the latest 2-4 real podcast episodes that discuss this team
 
-Only include real URLs you found via search. Do not fabricate links.`,
+Only include real URLs you found via search. Do not fabricate links.
+
+This team is based in ${team.country ?? "an unspecified country"}. If local coverage of this team is mainly in a language other than English (e.g. Korean, Japanese), actively search using local-language queries too and include native-language sources (news outlets, YouTube channels, podcasts) — don't limit yourself to English-language results. Keep titles and summaries in their original language exactly as published; do not translate them to English.`,
   });
 
   return output;
