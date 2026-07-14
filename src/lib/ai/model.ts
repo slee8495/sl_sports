@@ -5,6 +5,9 @@ import { anthropic } from "@ai-sdk/anthropic";
 // since that's on-demand/low-volume and benefits more from a stronger model.
 export const MODEL = "anthropic/claude-haiku-4.5";
 export const CHAT_MODEL = "anthropic/claude-sonnet-5";
+// Routed through AI Gateway's speech.() / transcription.() helpers, not plain model id strings.
+export const SPEECH_MODEL_ID = "openai/tts-1-hd";
+export const TRANSCRIPTION_MODEL_ID = "openai/gpt-4o-mini-transcribe";
 
 export function webSearchTool(maxUses = 4) {
   return anthropic.tools.webSearch_20250305({ maxUses });

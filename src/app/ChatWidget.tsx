@@ -1,15 +1,89 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useChat } from "@ai-sdk/react";
-import { DefaultChatTransport } from "ai";
+import { DefaultChatTransport, type UIMessage } from "ai";
+import { speak } from "@/lib/speak";
+
+function messageText(message: UIMessage): string {
+  return message.parts
+    .filter((p): p is Extract<typeof p, { type: "text" }> => p.type === "text")
+    .map((p) => p.text)
+    .join(" ")
+    .trim();
+}
+
+const RECORDING_MIME_TYPES = ["audio/webm", "audio/mp4", "audio/ogg"];
+
+function pickRecordingMimeType(): string | undefined {
+  if (typeof MediaRecorder === "undefined") return undefined;
+  return RECORDING_MIME_TYPES.find((type) => MediaRecorder.isTypeSupported(type));
+}
 
 export function ChatWidget() {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
+  const [autoSpeak, setAutoSpeak] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
   const { messages, sendMessage, status } = useChat({
     transport: new DefaultChatTransport({ api: "/api/chat" }),
   });
+
+  const spokenIds = useRef(new Set<string>());
+  useEffect(() => {
+    if (!autoSpeak || status !== "ready") return;
+    const last = messages[messages.length - 1];
+    if (!last || last.role !== "assistant" || spokenIds.current.has(last.id)) return;
+    const text = messageText(last);
+    if (!text) return;
+    spokenIds.current.add(last.id);
+    speak(text);
+  }, [autoSpeak, status, messages]);
+
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+
+  async function startRecording() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mimeType = pickRecordingMimeType();
+      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      const chunks: BlobPart[] = [];
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunks.push(e.data);
+      };
+      recorder.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        const blob = new Blob(chunks, { type: mimeType || "audio/webm" });
+        setTranscribing(true);
+        try {
+          const form = new FormData();
+          form.append("audio", blob, "voice-input.webm");
+          const res = await fetch("/api/transcribe", { method: "POST", body: form });
+          if (!res.ok) throw new Error("transcription failed");
+          const { text } = await res.json();
+          if (text?.trim()) sendMessage({ text: text.trim() });
+        } catch {
+          // best-effort — silently drop, user can just type instead
+        } finally {
+          setTranscribing(false);
+        }
+      };
+
+      mediaRecorderRef.current = recorder;
+      recorder.start();
+      setRecording(true);
+    } catch {
+      // mic permission denied or unsupported — no-op, user can still type
+    }
+  }
+
+  function stopRecording() {
+    mediaRecorderRef.current?.stop();
+    mediaRecorderRef.current = null;
+    setRecording(false);
+  }
 
   return (
     <>
@@ -20,9 +94,20 @@ export function ChatWidget() {
         >
           <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
             <span className="text-sm font-semibold">🤖 Ask about your teams</span>
-            <button onClick={() => setOpen(false)} className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300">
-              ✕
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setAutoSpeak((v) => !v)}
+                aria-pressed={autoSpeak}
+                aria-label="Read replies aloud"
+                title="Read replies aloud"
+                className={`text-base ${autoSpeak ? "" : "opacity-40"}`}
+              >
+                {autoSpeak ? "🔊" : "🔇"}
+              </button>
+              <button onClick={() => setOpen(false)} className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300">
+                ✕
+              </button>
+            </div>
           </div>
 
           <div className="flex-1 overflow-y-auto px-4 py-3">
@@ -45,6 +130,16 @@ export function ChatWidget() {
                       part.type === "text" ? <span key={i}>{part.text}</span> : null,
                     )}
                   </div>
+                  {message.role === "assistant" && messageText(message) && (
+                    <button
+                      onClick={() => speak(messageText(message))}
+                      aria-label="Read this reply aloud"
+                      title="Read aloud"
+                      className="ml-1 align-middle text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+                    >
+                      🔊
+                    </button>
+                  )}
                 </div>
               ))}
               {status === "submitted" && <div className="text-sm text-zinc-400">Thinking…</div>}
@@ -64,9 +159,24 @@ export function ChatWidget() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               disabled={status !== "ready"}
-              placeholder="Ask a question…"
+              placeholder={recording ? "Listening…" : transcribing ? "Transcribing…" : "Ask a question…"}
               className="min-w-0 flex-1 rounded-lg border border-zinc-200 bg-transparent px-3 py-1.5 text-sm outline-none focus:border-zinc-400 dark:border-zinc-700"
             />
+            <button
+              type="button"
+              onClick={() => (recording ? stopRecording() : startRecording())}
+              disabled={status !== "ready" || transcribing}
+              aria-pressed={recording}
+              aria-label={recording ? "Stop recording" : "Ask by voice"}
+              title={recording ? "Stop recording" : "Ask by voice"}
+              className={`rounded-lg px-3 py-1.5 text-sm disabled:opacity-40 ${
+                recording
+                  ? "bg-red-600 text-white"
+                  : "border border-zinc-200 text-zinc-600 dark:border-zinc-700 dark:text-zinc-300"
+              }`}
+            >
+              {recording ? "⏹" : "🎤"}
+            </button>
             <button
               type="submit"
               disabled={status !== "ready"}
