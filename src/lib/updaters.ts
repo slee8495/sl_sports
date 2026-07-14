@@ -18,6 +18,19 @@ function toDate(value: string | null): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
+// The model occasionally echoes stray JSON-array punctuation into a URL string (e.g.
+// `https://example.com/ep/','`). new URL() is lenient about trailing junk in the path, so
+// zod's .url() check lets it through — strip it here before it hits the (unique) DB column.
+function cleanUrl(raw: string): string | null {
+  const trimmed = raw.trim().replace(/["'),.\]}]+$/, "");
+  try {
+    new URL(trimmed);
+    return trimmed;
+  } catch {
+    return null;
+  }
+}
+
 async function logResult(teamId: number, kind: string, ok: boolean, error?: string) {
   await db.insert(updateLog).values({ teamId, kind, success: ok, errorMessage: error });
 }
@@ -82,52 +95,58 @@ export async function updateOneProfile(team: Team): Promise<UpdateResult> {
 }
 
 async function insertNews(teamId: number, news: TeamMedia["news"]) {
-  if (news.length === 0) return;
-  await db
-    .insert(newsItems)
-    .values(
-      news.map((n) => ({
+  const rows = news
+    .map((n) => {
+      const url = cleanUrl(n.url);
+      if (!url) return null;
+      return {
         teamId,
         title: n.title,
         summary: n.summary,
-        url: n.url,
+        url,
         source: n.source,
         publishedAt: toDate(n.publishedAt),
-      })),
-    )
-    .onConflictDoNothing({ target: newsItems.url });
+      };
+    })
+    .filter((r) => r !== null);
+  if (rows.length === 0) return;
+  await db.insert(newsItems).values(rows).onConflictDoNothing({ target: newsItems.url });
 }
 
 async function insertHighlights(teamId: number, list: TeamMedia["highlights"]) {
-  if (list.length === 0) return;
-  await db
-    .insert(highlights)
-    .values(
-      list.map((h) => ({
+  const rows = list
+    .map((h) => {
+      const videoUrl = cleanUrl(h.videoUrl);
+      if (!videoUrl) return null;
+      return {
         teamId,
         title: h.title,
-        videoUrl: h.videoUrl,
+        videoUrl,
         thumbnailUrl: h.thumbnailUrl,
         publishedAt: toDate(h.publishedAt),
-      })),
-    )
-    .onConflictDoNothing({ target: highlights.videoUrl });
+      };
+    })
+    .filter((r) => r !== null);
+  if (rows.length === 0) return;
+  await db.insert(highlights).values(rows).onConflictDoNothing({ target: highlights.videoUrl });
 }
 
 async function insertPodcasts(teamId: number, list: TeamMedia["podcasts"]) {
-  if (list.length === 0) return;
-  await db
-    .insert(podcastEpisodes)
-    .values(
-      list.map((p) => ({
+  const rows = list
+    .map((p) => {
+      const episodeUrl = cleanUrl(p.episodeUrl);
+      if (!episodeUrl) return null;
+      return {
         teamId,
         showName: p.showName,
         title: p.title,
-        episodeUrl: p.episodeUrl,
+        episodeUrl,
         publishedAt: toDate(p.publishedAt),
-      })),
-    )
-    .onConflictDoNothing({ target: podcastEpisodes.episodeUrl });
+      };
+    })
+    .filter((r) => r !== null);
+  if (rows.length === 0) return;
+  await db.insert(podcastEpisodes).values(rows).onConflictDoNothing({ target: podcastEpisodes.episodeUrl });
 }
 
 async function insertGames(teamId: number, list: TeamSchedule["games"]) {

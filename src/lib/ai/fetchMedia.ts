@@ -1,6 +1,7 @@
 import { generateText, Output, isStepCount } from "ai";
 import { z } from "zod";
 import { MODEL, webSearchTool } from "./model";
+import { QUALITY_BAR } from "./contentQualityBar";
 import type { teams } from "@/db/schema";
 
 const mediaSchema = z.object({
@@ -26,7 +27,7 @@ const mediaSchema = z.object({
       }),
     )
     .max(4)
-    .describe("Most recent real highlight videos"),
+    .describe("Most recent real, playable highlight videos"),
   podcasts: z
     .array(
       z.object({
@@ -37,7 +38,7 @@ const mediaSchema = z.object({
       }),
     )
     .max(4)
-    .describe("Most recent real podcast episodes discussing this team"),
+    .describe("Most recent real, relevant podcast episodes"),
 });
 
 export type TeamMedia = z.infer<typeof mediaSchema>;
@@ -52,9 +53,9 @@ export async function fetchTeamMedia(team: typeof teams.$inferSelect): Promise<T
 
 1. News: the latest 3-6 real news articles (title, 1-2 sentence summary, real URL, source, published date)
 2. Highlights: the latest 2-4 real highlight/recap videos, preferring official YouTube channels (league or team)
-3. Podcasts: the latest 2-4 real podcast episodes that discuss this team
+3. Podcasts: the latest 2-4 real podcast episodes that discuss this team, or this team's league
 
-Only include real URLs you found via search. Do not fabricate links.
+${QUALITY_BAR}
 
 This team is based in ${team.country ?? "an unspecified country"}. If local coverage of this team is mainly in a language other than English (e.g. Korean, Japanese), actively search using local-language queries too and include native-language sources (news outlets, YouTube channels, podcasts) — don't limit yourself to English-language results. Keep titles and summaries in their original language exactly as published; do not translate them to English.`,
   });

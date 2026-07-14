@@ -1,6 +1,7 @@
 import { generateText, Output, isStepCount } from "ai";
 import { z } from "zod";
 import { MODEL, webSearchTool } from "./model";
+import { QUALITY_BAR } from "./contentQualityBar";
 import type { teams } from "@/db/schema";
 
 const contentSchema = z.object({
@@ -26,7 +27,7 @@ const contentSchema = z.object({
       }),
     )
     .max(4)
-    .describe("Real highlight videos from roughly the last 3 days"),
+    .describe("Real, playable highlight videos from roughly the last 3 days"),
   podcasts: z
     .array(
       z.object({
@@ -37,7 +38,7 @@ const contentSchema = z.object({
       }),
     )
     .max(4)
-    .describe("Real podcast episodes from roughly the last 3 days discussing this team"),
+    .describe("Real, relevant podcast episodes from roughly the last 3 days"),
   games: z
     .array(
       z.object({
@@ -71,10 +72,12 @@ export async function fetchTeamContent(team: typeof teams.$inferSelect): Promise
 
 1. News: all the notable real news articles from the last ~3 days (title, 1-2 sentence summary, real URL, source, published date)
 2. Highlights: real highlight/recap videos from the last ~3 days, preferring official YouTube channels
-3. Podcasts: real podcast episodes from the last ~3 days discussing this team
+3. Podcasts: real podcast episodes discussing this team or its league — prefer ones from the last ~3 days, but a slightly older still-relevant episode beats nothing
 4. Schedule: the next 2-3 upcoming games, AND every completed game from the last ~3 days (opponent, home/away, competition, venue, exact date/time in ISO 8601, 2-4 key points each)
 
 Be efficient with searches, but make sure you cover the full ~3-day gap rather than just the single most recent item. Only include real URLs/facts you found via search, never fabricate.
+
+${QUALITY_BAR}
 
 This team is based in ${team.country ?? "an unspecified country"}. If local coverage of this team is mainly in a language other than English (e.g. Korean, Japanese), actively search using local-language queries too and include native-language sources (news outlets, YouTube channels, podcasts) — don't limit yourself to English-language results. Keep titles and summaries in their original language exactly as published; do not translate them to English.`,
   });
