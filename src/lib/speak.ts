@@ -76,17 +76,20 @@ function fetchAudioUrl(text: string): Promise<string | null> {
   return promise;
 }
 
-// Plays one clip and resolves once it's done — including if it gets paused out from under it
-// by a newer speak() call, so a stale chunk sequence can notice and stop instead of hanging.
-function playAudio(url: string): Promise<void> {
+// Plays one clip and resolves once it *actually* finishes (or errors). Deliberately does NOT
+// treat a bare "pause" event as completion — a pause can fire for reasons that have nothing to
+// do with the clip being done (OS media-session interruptions, tab backgrounding, screen lock),
+// and treating those as "finished" was making playback silently skip ahead or stop partway
+// through a reply. A superseded call's stopSpeaking() pause is instead handled by the caller's
+// playToken check: the promise just never resolves for a paused-but-not-ended clip, which is
+// fine since nothing awaits it further once the sequence has moved on.
+function playAudio(url: string): Promise<boolean> {
   return new Promise((resolve) => {
     const audio = new Audio(url);
     currentAudio = audio;
-    const done = () => resolve();
-    audio.addEventListener("ended", done, { once: true });
-    audio.addEventListener("pause", done, { once: true });
-    audio.addEventListener("error", done, { once: true });
-    audio.play().catch(done);
+    audio.addEventListener("ended", () => resolve(true), { once: true });
+    audio.addEventListener("error", () => resolve(false), { once: true });
+    audio.play().catch(() => resolve(false));
   });
 }
 
@@ -108,14 +111,19 @@ export async function speak(text: string) {
   const urlPromises = chunks.map((chunk) => fetchAudioUrl(chunk));
 
   for (let i = 0; i < urlPromises.length; i++) {
-    const url = await urlPromises[i];
     if (token !== playToken) return; // a newer speak() call superseded this one
+    const url = await urlPromises[i];
+    if (token !== playToken) return;
 
     if (!url) {
       speakWithBrowserVoice(chunks.slice(i).join(" "));
       return;
     }
-    await playAudio(url);
+    const finishedCleanly = await playAudio(url);
     if (token !== playToken) return;
+    if (!finishedCleanly) {
+      speakWithBrowserVoice(chunks.slice(i + 1).join(" "));
+      return;
+    }
   }
 }
