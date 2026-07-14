@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
-import { speak } from "@/lib/speak";
+import { prefetchSpeech, speak } from "@/lib/speak";
 
 function messageText(message: UIMessage): string {
   return message.parts
@@ -26,19 +26,27 @@ export function ChatWidget() {
   const [autoSpeak, setAutoSpeak] = useState(false);
   const [recording, setRecording] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
+  const [loadingSpeakId, setLoadingSpeakId] = useState<string | null>(null);
   const { messages, sendMessage, status } = useChat({
     transport: new DefaultChatTransport({ api: "/api/chat" }),
   });
 
-  const spokenIds = useRef(new Set<string>());
+  // As soon as a reply finishes, either speak it (autoSpeak on) or just warm the TTS cache in
+  // the background — generation takes a few seconds, so prefetching means the per-message
+  // 🔊 button usually plays instantly instead of making the user wait after they click it.
+  const handledReplyIds = useRef(new Set<string>());
   useEffect(() => {
-    if (!autoSpeak || status !== "ready") return;
+    if (status !== "ready") return;
     const last = messages[messages.length - 1];
-    if (!last || last.role !== "assistant" || spokenIds.current.has(last.id)) return;
+    if (!last || last.role !== "assistant" || handledReplyIds.current.has(last.id)) return;
     const text = messageText(last);
     if (!text) return;
-    spokenIds.current.add(last.id);
-    speak(text);
+    handledReplyIds.current.add(last.id);
+    if (autoSpeak) {
+      speak(text);
+    } else {
+      prefetchSpeech(text);
+    }
   }, [autoSpeak, status, messages]);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -132,12 +140,17 @@ export function ChatWidget() {
                   </div>
                   {message.role === "assistant" && messageText(message) && (
                     <button
-                      onClick={() => speak(messageText(message))}
+                      onClick={async () => {
+                        setLoadingSpeakId(message.id);
+                        await speak(messageText(message));
+                        setLoadingSpeakId((id) => (id === message.id ? null : id));
+                      }}
+                      disabled={loadingSpeakId === message.id}
                       aria-label="Read this reply aloud"
                       title="Read aloud"
-                      className="ml-1 align-middle text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+                      className="ml-1 align-middle text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 disabled:opacity-50"
                     >
-                      🔊
+                      {loadingSpeakId === message.id ? "…" : "🔊"}
                     </button>
                   )}
                 </div>
