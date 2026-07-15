@@ -6,8 +6,8 @@ import { isAuthorizedRequest } from "@/lib/apiAuth";
 export const maxDuration = 60;
 
 // Speech-to-text for the chat assistant's mic input, routed through AI Gateway
-// (openai/gpt-4o-mini-transcribe). Takes the recorded clip as multipart form data
-// (browser MediaRecorder output) rather than a raw body, since the client sends a Blob.
+// (openai/whisper-1). Takes the recorded clip as multipart form data (browser MediaRecorder
+// output, or the SLKeyboard app's AVAudioRecorder output) rather than a raw body.
 //
 // Also called by the SLKeyboard iOS app (see isAuthorizedRequest), so this isn't a free
 // open proxy to a billed transcription model for anyone who finds the URL.
@@ -24,11 +24,20 @@ export async function POST(req: NextRequest) {
 
   try {
     const audio = new Uint8Array(await file.arrayBuffer());
-    const { text } = await transcribe({
+    const { text, language, durationInSeconds } = await transcribe({
       model: gateway.transcription(TRANSCRIPTION_MODEL_ID),
       audio,
     });
-    return NextResponse.json({ text });
+    // TEMP diagnostic logging while tracking down a language-misdetection report from the
+    // SLKeyboard app — remove once resolved.
+    console.log("[transcribe]", {
+      bytes: audio.length,
+      mediaType: file.type,
+      language,
+      durationInSeconds,
+      text,
+    });
+    return NextResponse.json({ text, language });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ error: "transcription failed", detail: message }, { status: 500 });
