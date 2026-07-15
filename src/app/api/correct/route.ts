@@ -22,9 +22,10 @@ export async function POST(req: NextRequest) {
     const { text: corrected } = await generateText({
       model: MODEL,
       system:
-        "You correct typos and spacing/punctuation in short pieces of text (Korean or English). " +
-        "Fix only spelling, spacing, and obvious punctuation mistakes. Do not change word choice, tone, " +
-        "grammatical structure, or meaning beyond that, and do not add or remove content. " +
+        "You correct typos and spacing/punctuation in short pieces of text, in whatever language " +
+        "the text is written in — do not translate it. Fix only spelling, spacing, and obvious " +
+        "punctuation mistakes. Do not change word choice, tone, grammatical structure, or meaning " +
+        "beyond that, and do not add or remove content. " +
         "Reply with ONLY the corrected text — no quotes, no explanation, no preamble.",
       prompt: text,
     });
