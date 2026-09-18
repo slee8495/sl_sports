@@ -56,4 +56,13 @@ xcrun altool --upload-app -f "$B/export/SLSports.ipa" -t ios \
 - **올릴 때마다 `project.yml` 의 `CURRENT_PROJECT_VERSION` 을 올린다.** 안 올리면 거절된다.
 - 앱 레코드는 **API 로 못 만든다.** 애플이 막아 뒀다 — App Store Connect 웹에서 한 번
   만들어야 하고(번들 ID `com.slstudio.slsports`), 그 전에는 업로드가
-  "Cannot determine the Apple ID from Bundle ID" 로 끝난다.
+  "Cannot determine the Apple ID from Bundle ID" 로 끝난다. 2026-09-18 에 만들었다.
+
+## 이름이 두 개인 이유
+
+| 어디 | 무엇 | 왜 |
+| --- | --- | --- |
+| 홈 화면 아이콘 | **SL Sports** | `INFOPLIST_KEY_CFBundleDisplayName` |
+| App Store · 테스트플라이트 | **SL Sports: My Teams** | 스토어 표시명은 전 세계에서 유일해야 하는데 "SL Sports" 는 이미 쓰이고 있다 |
+
+스토어 이름은 출시 전까지 App Store Connect 에서 바꿀 수 있다. 홈 화면 이름은 여기 안 걸린다.
