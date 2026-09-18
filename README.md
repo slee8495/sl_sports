@@ -82,6 +82,13 @@ npm run dev
 
 AI Gateway 는 Vercel OIDC 로 붙는다(`/api/chat`, `/api/speak`). **팀 데이터는 모델을 안 쓴다.**
 
+## 아이폰 앱
+
+`ios/` 에 `WKWebView` 껍데기가 있다. 화면은 이 웹앱을 그대로 쓰고, 네이티브는 당겨
+새로고침·복귀 시 갱신·바깥 링크·마이크만 맡는다. 빌드와 테스트플라이트는
+[`ios/README.md`](ios/README.md).
+
 ## 아이콘
 
-천장에 걸린 우승 배너. `python3 assets/icon/gen_icon.py` 로 다시 만든다.
+천장에 걸린 우승 배너. `python3 assets/icon/gen_icon.py` 로 다시 만든다. 아이폰 앱
+아이콘은 같은 그림의 **모서리 안 깎은 판**을 쓴다 — iOS 가 자기 마스크를 한 번 더 씌운다.

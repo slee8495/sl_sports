@@ -1,0 +1,4 @@
+# xcodegen 이 만든다. 사람이 고칠 물건이 아니라 커밋하지 않는다.
+*.xcodeproj/
+build/
+DerivedData/
