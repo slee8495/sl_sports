@@ -21,6 +21,7 @@
  */
 
 import { unstable_cache } from "next/cache";
+import { orderStandings } from "./split";
 import type { Fetched, Player, StandingsGroup, StandingsRow } from "./types";
 
 const TTL = { team: 1_800, standings: 1_800, roster: 43_200 } as const;
@@ -136,10 +137,10 @@ async function fetchStandings(
   groupName: string,
 ): Promise<Fetched<StandingsGroup[]>> {
   const pp = await readNextData(leagueUrl);
-  const rows = (pp?.layoutProps as { tableData?: LeagueRow[] } | undefined)?.tableData;
-  if (!Array.isArray(rows) || rows.length === 0) return null;
+  const table = (pp?.layoutProps as { tableData?: LeagueRow[] } | undefined)?.tableData;
+  if (!Array.isArray(table) || table.length === 0) return null;
 
-  const out: StandingsRow[] = rows
+  const out: StandingsRow[] = table
     .filter((r) => r.schoolName)
     .map((r) => {
       const pf = r.points ?? null;
@@ -165,7 +166,8 @@ async function fetchStandings(
       } satisfies StandingsRow;
     });
 
-  return [{ name: groupName, parent: null, rows: out }];
+  const { rows, ordered } = orderStandings(out);
+  return [{ name: groupName, parent: null, rows, ordered }];
 }
 
 const cachedStandings = unstable_cache(fetchStandings, ["maxpreps-standings"], {

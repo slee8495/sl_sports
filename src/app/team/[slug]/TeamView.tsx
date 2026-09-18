@@ -3,35 +3,43 @@
 import { useState } from "react";
 import Link from "next/link";
 import type { Team } from "@/lib/sources/teams";
-import type { Injury, Program, Roster } from "@/lib/sources";
-import { recordOf, splitPrograms } from "@/lib/sources/split";
+import { defaultProgram, type Injury, type Program, type Roster, type ScheduleSplit } from "@/lib/sources";
+import { recordOf, splitSchedule } from "@/lib/sources/split";
+import { Ball } from "@/components/Ball";
 import type { Article, Fetched, Game, StandingsGroup, TeamSnapshot } from "@/lib/sources/types";
 import { dayLabel, gameLabel, relative, shortDate, timeLabel } from "@/lib/format";
-import { Empty, Failed, FormStrip, GameRow, LiveDot, scoreline, SectionTitle } from "@/components/Bits";
+import { Empty, Failed, FormStrip, GameRow, LiveDot, scoreline, SectionTitle, Side, Tickets } from "@/components/Bits";
 
 type Props = {
   team: Team;
-  snapshot: TeamSnapshot;
   programs: Fetched<Program[]>;
-  roster: Fetched<Roster>;
-  standings: Fetched<StandingsGroup[]>;
   news: Fetched<Article[]>;
-  injuries: Fetched<Injury[]>;
   live: Fetched<Game | null>;
 };
 
 type TabKey = "now" | "schedule" | "roster" | "standings" | "news";
 
-export function TeamView(props: Props) {
-  const { team, snapshot, programs, roster, standings, news, injuries } = props;
+export function TeamView({ team, programs, news, live: liveNow }: Props) {
+  /*
+    **종목이 화면의 단위다.** 오렌지 루터란은 한 학교가 풋볼도 야구도 하고, 전적도
+    순위표도 로스터도 종목마다 다르다. 그래서 고른 종목이 이 화면 전체를 정한다 —
+    탭 하나만 갈리는 게 아니다.
+  */
+  const list = programs ?? [];
+  const [picked, setPicked] = useState<string | null>(null);
+  const program = list.find((p) => p.key === picked) ?? defaultProgram(list);
 
-  const split = splitPrograms(programs ?? []);
+  const split = splitSchedule(program?.games ?? []);
   // 스코어보드 쪽이 더 빨리 갱신된다. 일정에 아직 안 반영된 진행 중 경기는 그쪽 것을 쓴다.
-  const live = props.live ?? split.live;
+  const live = liveNow ?? split.live;
+  const roster = program?.roster ?? null;
+  const standings = program?.standings ?? null;
+  const injuries = program?.injuries ?? null;
 
   /*
-    **없는 탭은 안 그린다.** 고등학교 팀에는 로스터도 순위표도 없다(학교가 안 내보낸다).
-    빈 탭을 남겨 두면 누를 때마다 "없음" 을 보여 주는 셈이고, 그건 고장처럼 보인다.
+    **없는 탭은 안 그린다.** 고등학교 야구에는 아직 순위표가 없고(비시즌), 로스터도 종목마다
+    있고 없고가 다르다. 빈 탭을 남겨 두면 누를 때마다 "없음" 을 보여 주는 셈이고, 그건
+    고장처럼 보인다.
   */
   const tabs: { key: TabKey; label: string; show: boolean }[] = [
     { key: "now", label: "Now", show: true },
@@ -42,6 +50,8 @@ export function TeamView(props: Props) {
   ];
   const [tab, setTab] = useState<TabKey>("now");
   const visible = tabs.filter((t) => t.show);
+  // 종목을 바꿨더니 지금 보던 탭이 사라지는 경우가 있다(야구에는 순위표가 없다).
+  const active = visible.some((t) => t.key === tab) ? tab : "now";
 
   return (
     <main style={{ ["--team" as string]: team.colors.primary, ["--team-2" as string]: team.colors.secondary }}>
@@ -51,11 +61,39 @@ export function TeamView(props: Props) {
 
       <Hero
         team={team}
-        snapshot={snapshot}
+        snapshot={program?.snapshot ?? { record: null, standingSummary: null, logo: team.logo, venue: null, venueCity: null }}
         finished={split.finished}
         live={live}
-        record={snapshot.record ?? recordOf(split.finished)}
+        record={program?.snapshot.record ?? recordOf(split.finished)}
       />
+
+      {/*
+        **종목 고르기.** 종목이 하나뿐인 팀에는 고를 것이 없으므로 이 줄이 아예 없다 —
+        누를 수 없는 단추 하나를 남겨 두는 것보다 낫다.
+      */}
+      {list.length > 1 && (
+        <div className="mt-4 flex gap-2">
+          {list.map((p) => {
+            const on = p.key === program?.key;
+            return (
+              <button
+                key={p.key}
+                onClick={() => setPicked(p.key)}
+                aria-pressed={on}
+                className={`flex items-center gap-2 rounded-[3px] border px-3 py-2 text-[13px] transition-colors ${
+                  on ? "border-transparent font-medium text-ink" : "border-edge text-faint hover:text-dim"
+                }`}
+                style={on ? { background: `${team.colors.primary}1f` } : undefined}
+              >
+                <Ball kind={p.ball} size={on ? 22 : 20} />
+                {p.label}
+                {/* 지금 시즌인 종목을 표시한다. 겨울에 열면 둘 다 조용하다. */}
+                {p.inSeason && <span className="h-1.5 w-1.5 rounded-full bg-win" aria-label="in season" />}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       <nav className="no-scrollbar -mx-5 mt-6 flex gap-5 overflow-x-auto border-b border-edge px-5">
         {visible.map((t) => (
@@ -63,9 +101,9 @@ export function TeamView(props: Props) {
             key={t.key}
             onClick={() => setTab(t.key)}
             className={`-mb-px shrink-0 border-b-2 pb-2.5 text-[13px] font-medium transition-colors ${
-              tab === t.key ? "text-ink" : "border-transparent text-faint hover:text-dim"
+              active === t.key ? "text-ink" : "border-transparent text-faint hover:text-dim"
             }`}
-            style={tab === t.key ? { borderColor: team.colors.primary } : undefined}
+            style={active === t.key ? { borderColor: team.colors.primary } : undefined}
           >
             {t.label}
           </button>
@@ -73,13 +111,13 @@ export function TeamView(props: Props) {
       </nav>
 
       <div className="pt-6">
-        {tab === "now" && (
-          <NowTab team={team} split={split} live={live} injuries={injuries} roster={roster} programs={programs} />
+        {active === "now" && (
+          <NowTab team={team} split={split} live={live} injuries={injuries} roster={roster} program={program} failed={programs === null} />
         )}
-        {tab === "schedule" && <ScheduleTab team={team} programs={programs} />}
-        {tab === "roster" && <RosterTab roster={roster} injuries={injuries} />}
-        {tab === "standings" && <StandingsTab standings={standings} accent={team.colors.primary} />}
-        {tab === "news" && <NewsTab news={news} />}
+        {active === "schedule" && <ScheduleTab team={team} split={split} program={program} failed={programs === null} />}
+        {active === "roster" && <RosterTab roster={roster} injuries={injuries} />}
+        {active === "standings" && <StandingsTab standings={standings} accent={team.colors.primary} />}
+        {active === "news" && <NewsTab news={news} />}
       </div>
     </main>
   );
@@ -147,18 +185,20 @@ function NowTab({
   live,
   injuries,
   roster,
-  programs,
+  program,
+  failed,
 }: {
   team: Team;
-  split: ReturnType<typeof splitPrograms>;
+  split: ScheduleSplit;
   live: Game | null;
   injuries: Fetched<Injury[]>;
   roster: Fetched<Roster>;
-  programs: Fetched<Program[]>;
+  program: Program | null;
+  failed: boolean;
 }) {
-  if (programs === null) return <Failed what="the schedule" />;
+  if (failed) return <Failed what="the schedule" />;
 
-  const pastSeason = programs.find((p) => p.pastSeason)?.pastSeason ?? null;
+  const pastSeason = program?.pastSeason ?? null;
   const showNextHome = split.nextHome && split.nextHome.id !== split.next?.id;
   const hurt = (injuries ?? []).filter((i) => !/^active$/i.test(i.status));
 
@@ -171,9 +211,9 @@ function NowTab({
       )}
 
       {live ? (
-        <Feature title="Playing now" game={live} accent={team.colors.primary} live />
+        <Feature title="Playing now" game={live} accent={team.colors.primary} live ticketsUrl={team.ticketsUrl} />
       ) : split.next ? (
-        <Feature title="Next game" game={split.next} accent={team.colors.primary} />
+        <Feature title="Next game" game={split.next} accent={team.colors.primary} ticketsUrl={team.ticketsUrl} />
       ) : (
         <Empty>No games scheduled. Check back when the season opens.</Empty>
       )}
@@ -182,14 +222,21 @@ function NowTab({
         <section>
           <SectionTitle aside={relative(split.nextHome.startsAt)}>Next home game</SectionTitle>
           <div className="rounded-[3px] border border-edge px-4 py-3">
-            <p className="text-sm">
-              <span className="text-faint">vs </span>
+            <p className="flex items-center gap-2 text-sm">
+              <Side game={split.nextHome} accent={team.colors.primary} />
               {split.nextHome.opponent.name}
             </p>
-            <p className="mt-1 text-xs text-dim tnum">
-              {gameLabel(split.nextHome.startsAt, split.nextHome.timeTbd)}
-              {split.nextHome.venue ? ` · ${split.nextHome.venue}` : ""}
-            </p>
+            <div className="mt-1 flex items-center gap-2">
+              <span className="text-xs text-dim tnum">
+                {gameLabel(split.nextHome.startsAt, split.nextHome.timeTbd)}
+                {split.nextHome.venue ? ` · ${split.nextHome.venue}` : ""}
+              </span>
+              {(() => {
+                const perGame = split.nextHome?.links.find((l) => /ticket/i.test(l.label));
+                const url = perGame?.url ?? team.ticketsUrl;
+                return url ? <Tickets url={url} /> : null;
+              })()}
+            </div>
           </div>
         </section>
       )}
@@ -243,13 +290,16 @@ function Feature({
   game,
   accent,
   live = false,
+  ticketsUrl,
 }: {
   title: string;
   game: Game;
   accent: string;
   live?: boolean;
+  ticketsUrl?: string | null;
 }) {
   const score = scoreline(game);
+  const buyable = !live && game.isHome === true && !game.neutralSite;
 
   return (
     <section>
@@ -270,8 +320,8 @@ function Feature({
             <img src={game.opponent.logo} alt="" className="h-9 w-9 object-contain" />
           )}
           <div className="min-w-0">
-            <p className="truncate text-[15px]">
-              <span className="text-faint">{game.neutralSite ? "vs" : game.isHome === false ? "at" : "vs"} </span>
+            <p className="flex items-center gap-2 truncate text-[15px]">
+              <Side game={game} accent={accent} />
               {game.opponent.name}
             </p>
             <p className="mt-0.5 truncate text-xs text-dim">
@@ -283,15 +333,33 @@ function Feature({
 
         {live && game.statusDetail && <p className="mt-3 text-xs text-dim">{game.statusDetail}</p>}
 
-        {game.links.length > 0 && (
+        {/*
+          바깥으로 나가는 링크들. **홈경기면 티켓이 맨 앞이다** — 이 카드를 보는 이유의
+          절반이 "보러 갈 수 있나" 이고, 그 답이 예일 때 할 일이 이것뿐이다.
+        */}
+        {(buyable || game.links.length > 0) && (
           <div className="mt-4 flex flex-wrap gap-2">
+            {buyable && ticketsUrl && !game.links.some((l) => /ticket/i.test(l.label)) && (
+              <a
+                href={ticketsUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-[2px] px-3 py-1.5 text-xs font-medium"
+                style={{ background: `${accent}24`, color: "var(--color-ink)" }}
+              >
+                Tickets
+              </a>
+            )}
             {game.links.map((l) => (
               <a
                 key={l.url}
                 href={l.url}
                 target="_blank"
                 rel="noreferrer"
-                className="rounded-[2px] border border-edge px-3 py-1.5 text-xs hover:border-dim"
+                className={`rounded-[2px] px-3 py-1.5 text-xs ${
+                  /ticket/i.test(l.label) ? "font-medium" : "border border-edge hover:border-dim"
+                }`}
+                style={/ticket/i.test(l.label) ? { background: `${accent}24`, color: "var(--color-ink)" } : undefined}
               >
                 {l.label}
               </a>
@@ -305,41 +373,28 @@ function Feature({
 
 /* ────────────────────────────── Schedule ────────────────────────────── */
 
-function ScheduleTab({ team, programs }: { team: Team; programs: Fetched<Program[]> }) {
-  const [programKey, setProgramKey] = useState<string | null>(null);
-  if (programs === null) return <Failed what="the schedule" />;
-  if (programs.length === 0) return <Empty>No schedule published yet.</Empty>;
-
-  const active = programs.find((p) => p.key === programKey) ?? programs[0];
-  const split = splitPrograms([active]);
+function ScheduleTab({
+  team,
+  split,
+  program,
+  failed,
+}: {
+  team: Team;
+  split: ScheduleSplit;
+  program: Program | null;
+  failed: boolean;
+}) {
+  if (failed) return <Failed what="the schedule" />;
+  if (!program) return <Empty>No schedule published yet.</Empty>;
 
   return (
     <div className="flex flex-col gap-8">
-      {/* 종목이 둘 이상인 팀만 — 오렌지 루터란은 풋볼과 야구를 같이 본다. */}
-      {programs.length > 1 && (
-        <div className="flex gap-2">
-          {programs.map((p) => (
-            <button
-              key={p.key}
-              onClick={() => setProgramKey(p.key)}
-              className={`rounded-[2px] border px-3 py-1.5 text-xs transition-colors ${
-                p.key === active.key ? "border-transparent font-medium text-ink" : "border-edge text-faint hover:text-dim"
-              }`}
-              style={p.key === active.key ? { background: `${team.colors.primary}1f` } : undefined}
-            >
-              {p.label}
-              <span className="ml-1.5 text-faint tnum">{p.games.length}</span>
-            </button>
-          ))}
-        </div>
-      )}
-
       {split.upcoming.length > 0 && (
         <section>
           <SectionTitle aside={`${split.upcoming.length} left`}>Upcoming</SectionTitle>
           <div>
             {split.upcoming.map((g) => (
-              <GameRow key={g.id} game={g} accent={team.colors.primary} />
+              <GameRow key={g.id} game={g} accent={team.colors.primary} ticketsUrl={team.ticketsUrl} />
             ))}
           </div>
         </section>
@@ -357,7 +412,13 @@ function ScheduleTab({ team, programs }: { team: Team; programs: Fetched<Program
       )}
 
       {split.upcoming.length === 0 && split.finished.length === 0 && (
-        <Empty>Nothing on the calendar for {active.label.toLowerCase()}.</Empty>
+        /*
+          비시즌이다. **"없다" 가 아니라 "아직" 이라고 적는다** — 야구는 가을에 0건이고
+          봄이 되면 채워진다. 그 둘을 같게 적으면 앱이 고장 난 것으로 읽힌다.
+        */
+        <Empty>
+          Nothing on the {program.label.toLowerCase()} calendar yet. The season hasn&apos;t opened.
+        </Empty>
       )}
     </div>
   );
@@ -458,6 +519,7 @@ function StandingsTab({ standings, accent }: { standings: Fetched<StandingsGroup
             <table className="w-full min-w-[420px] border-collapse text-sm">
               <thead>
                 <tr className="text-[11px] text-faint">
+                  {group.ordered && <th className="w-6 pb-2 text-left font-normal">#</th>}
                   <th className="pb-2 text-left font-normal">Team</th>
                   <th className="pb-2 text-right font-normal">W</th>
                   <th className="pb-2 text-right font-normal">L</th>
@@ -467,12 +529,14 @@ function StandingsTab({ standings, accent }: { standings: Fetched<StandingsGroup
                 </tr>
               </thead>
               <tbody className="tnum">
-                {group.rows.map((r) => (
+                {group.rows.map((r, i) => (
                   <tr
                     key={r.teamId ?? r.name}
                     className="border-t border-edge/70"
                     style={r.isUs ? { background: `${accent}12` } : undefined}
                   >
+                    {/* 줄을 세운 경우에만 번호를 붙인다. 모르는 순서에 1,2,3 을 적지 않는다. */}
+                    {group.ordered && <td className="py-2 pr-1 text-faint">{i + 1}</td>}
                     <td className="py-2 pr-2">
                       <div className="flex items-center gap-2">
                         {r.logo ? (

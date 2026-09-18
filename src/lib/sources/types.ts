@@ -102,6 +102,14 @@ export type StandingsGroup = {
   /** 그 위 묶음 — "American Football Conference". 없으면 null. */
   parent: string | null;
   rows: StandingsRow[];
+  /**
+   * 우리가 실제 순위대로 줄을 세웠는가(`orderStandings`).
+   *
+   * 개막 전이라 전부 0이면 세울 근거가 없다. 그때 화면이 순위 번호를 붙이면 **모르는 것을
+   * 아는 척하는 것**이 된다 — 순서 없이 온 표를 그대로 그려서 에인절스를 2위로 적었던 것과
+   * 같은 잘못이다.
+   */
+  ordered: boolean;
 };
 
 /** 팀 현재 상태 한 장. 팀 화면 맨 위 히어로가 이걸로 그려진다. */

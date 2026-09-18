@@ -78,6 +78,14 @@ export type Team = {
   /** 로고. ESPN CDN 이거나 우리가 받아 둔 파일. */
   logo: string;
   homeVenue: string | null;
+  /**
+   * 표를 파는 곳. **홈경기에만 뜬다** — 원정 경기 티켓은 상대 구단이 판다.
+   *
+   * 경기별 링크를 쓰지 않는 이유: ESPN 은 오늘 경기에만 티켓 링크를 주고, 그 링크는
+   * 재판매 사이트다. 구단 공식 페이지 한 줄이 늘 살아 있고, 날짜는 거기서 고르면 된다.
+   * 확인한 값이고(2026-09-18 전부 200), 리다이렉트도 제대로 따라간다.
+   */
+  ticketsUrl: string | null;
   source: Source;
   /** 이 팀에 대해 화면 맨 위에 늘 뜨는 한 줄. 골수팬이면 아는 것. */
   tagline: string;
@@ -96,6 +104,7 @@ export const TEAMS: Team[] = [
     colors: { primary: "#0080C6", secondary: "#FFC20E", onPrimary: "#FFFFFF" },
     logo: "https://a.espncdn.com/i/teamlogos/nfl/500/lac.png",
     homeVenue: "SoFi Stadium",
+    ticketsUrl: "https://www.chargers.com/tickets/",
     source: { kind: "espn", path: "football/nfl", teamId: "24", standingsLevel: 3 },
     tagline: "Bolt Up",
   },
@@ -111,6 +120,7 @@ export const TEAMS: Team[] = [
     colors: { primary: "#BA0021", secondary: "#003263", onPrimary: "#FFFFFF" },
     logo: "https://a.espncdn.com/i/teamlogos/mlb/500/laa.png",
     homeVenue: "Angel Stadium",
+    ticketsUrl: "https://www.mlb.com/angels/tickets",
     source: { kind: "espn", path: "baseball/mlb", teamId: "3", standingsLevel: 3 },
     tagline: "Light That Halo",
   },
@@ -126,6 +136,7 @@ export const TEAMS: Team[] = [
     colors: { primary: "#1D428A", secondary: "#C8102E", onPrimary: "#FFFFFF" },
     logo: "https://a.espncdn.com/i/teamlogos/nba/500/lac.png",
     homeVenue: "Intuit Dome",
+    ticketsUrl: "https://www.nba.com/clippers/tickets",
     source: { kind: "espn", path: "basketball/nba", teamId: "12", standingsLevel: 3 },
     tagline: "It Takes Everything",
   },
@@ -141,6 +152,7 @@ export const TEAMS: Team[] = [
     colors: { primary: "#FC4C02", secondary: "#B9975B", onPrimary: "#FFFFFF" },
     logo: "https://a.espncdn.com/i/teamlogos/nhl/500/ana.png",
     homeVenue: "Honda Center",
+    ticketsUrl: "https://www.nhl.com/ducks/tickets",
     source: { kind: "espn", path: "hockey/nhl", teamId: "25", standingsLevel: 3 },
     tagline: "Fear the Wings",
   },
@@ -156,6 +168,7 @@ export const TEAMS: Team[] = [
     colors: { primary: "#A6192E", secondary: "#000000", onPrimary: "#FFFFFF" },
     logo: "https://a.espncdn.com/i/teamlogos/ncaa/500/21.png",
     homeVenue: "Snapdragon Stadium",
+    ticketsUrl: "https://goaztecs.com/tickets",
     source: { kind: "espn", path: "football/college-football", teamId: "21", standingsLevel: 2 },
     tagline: "I Believe That We Will Win",
   },
@@ -171,6 +184,7 @@ export const TEAMS: Team[] = [
     colors: { primary: "#182B49", secondary: "#FFCD00", onPrimary: "#FFFFFF" },
     logo: "https://a.espncdn.com/i/teamlogos/ncaa/500/28.png",
     homeVenue: "LionTree Arena",
+    ticketsUrl: "https://ucsdtritons.com/tickets",
     source: {
       kind: "espn",
       path: "basketball/mens-college-basketball",
@@ -191,6 +205,7 @@ export const TEAMS: Team[] = [
     colors: { primary: "#CC0022", secondary: "#1B1B1B", onPrimary: "#FFFFFF" },
     logo: "/logos/orange-lutheran.webp",
     homeVenue: null,
+    ticketsUrl: "https://gofan.co/app/school/CA18913",
     source: {
       kind: "school",
       host: "https://oluathletics.org",

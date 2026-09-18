@@ -52,15 +52,71 @@ export function scoreline(game: Game): string | null {
 }
 
 /**
+ * 홈인지 원정인지.
+ *
+ * 예전에는 "vs" 와 "at" 을 같은 흐린 글씨로 적었다. 두 글자가 비슷하게 생겨서 **표를
+ * 훑을 때 안 읽힌다** — 일정에서 제일 먼저 알고 싶은 것이 "이건 보러 갈 수 있는 경기인가"
+ * 인데 그게 안 보였다(소유자 지적).
+ *
+ * 그래서 홈은 팀 색 칩으로 **눈에 띄게**, 원정은 스포츠 중계가 쓰는 `@` 로 조용하게.
+ * 중립 구장은 둘 다 아니다 — 어느 쪽 관중석도 홈이 아니라서 그렇게 적는다.
+ */
+export function Side({ game, accent }: { game: Game; accent: string }) {
+  if (game.neutralSite) {
+    return <span className="shrink-0 text-[11px] text-faint">neutral</span>;
+  }
+  if (game.isHome === false) {
+    return <span className="shrink-0 text-[13px] font-medium text-faint tnum">@</span>;
+  }
+  return (
+    <span
+      className="shrink-0 rounded-[2px] px-1.5 py-0.5 text-[10px] font-semibold tracking-wide"
+      style={{ background: `${accent}1f`, color: "var(--color-ink)" }}
+    >
+      HOME
+    </span>
+  );
+}
+
+/** 표 사러 가는 링크. **홈경기에만** 붙는다 — 원정 티켓은 상대 구단이 판다. */
+export function Tickets({ url, label = "Tickets" }: { url: string; label?: string }) {
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noreferrer"
+      // 줄 전체가 링크인 자리에 겹쳐 놓기도 해서, 눌린 것이 이쪽임을 분명히 한다.
+      onClick={(e) => e.stopPropagation()}
+      className="shrink-0 text-[11px] font-medium text-dim underline decoration-edge underline-offset-2 hover:text-ink"
+    >
+      {label}
+    </a>
+  );
+}
+
+/**
  * 한 경기를 한 줄로.
  *
  * 예정된 경기는 **언제**가 굵고, 끝난 경기는 **결과**가 굵다. 같은 줄이지만 보러 오는
  * 이유가 다르다.
  */
-export function GameRow({ game, accent }: { game: Game; accent: string }) {
+export function GameRow({
+  game,
+  accent,
+  ticketsUrl,
+}: {
+  game: Game;
+  accent: string;
+  /** 팀의 티켓 판매처. 앞으로의 홈경기에만 쓴다. */
+  ticketsUrl?: string | null;
+}) {
   const done = game.status === "final";
   const live = game.status === "in";
   const score = scoreline(game);
+  // 지나간 경기에 티켓 링크를 붙이지 않는다. 그건 이미 못 가는 경기다.
+  const showTickets = !done && !live && game.isHome === true && !game.neutralSite;
+  // 경기별 링크(학교 피드의 GoFan)가 있으면 그게 낫다 — 그 경기 표로 바로 간다.
+  const perGame = game.links.find((l) => /ticket/i.test(l.label));
 
   return (
     <div className="flex items-center gap-3 border-b border-edge/70 py-3 last:border-b-0">
@@ -80,16 +136,17 @@ export function GameRow({ game, accent }: { game: Game; accent: string }) {
       </div>
 
       <div className="min-w-0 flex-1">
-        <div className="truncate text-[15px] leading-tight">
-          <span className="text-faint">{game.neutralSite ? "vs" : game.isHome === false ? "at" : "vs"} </span>
-          <span className="font-medium">{game.opponent.name}</span>
+        <div className="flex items-center gap-2">
+          <Side game={game} accent={accent} />
+          <span className="truncate text-[15px] leading-tight font-medium">{game.opponent.name}</span>
         </div>
-        <div className="mt-0.5 truncate text-xs text-dim tnum">
-          {game.status === "postponed"
-            ? "Postponed"
-            : gameLabel(game.startsAt, game.timeTbd)}
-          {game.note ? ` · ${game.note}` : ""}
-          {game.broadcast ? ` · ${game.broadcast}` : ""}
+        <div className="mt-0.5 flex items-center gap-2">
+          <span className="truncate text-xs text-dim tnum">
+            {game.status === "postponed" ? "Postponed" : gameLabel(game.startsAt, game.timeTbd)}
+            {game.note ? ` · ${game.note}` : ""}
+            {game.broadcast ? ` · ${game.broadcast}` : ""}
+          </span>
+          {showTickets && (perGame ? <Tickets url={perGame.url} /> : ticketsUrl ? <Tickets url={ticketsUrl} /> : null)}
         </div>
       </div>
 

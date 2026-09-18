@@ -9,6 +9,7 @@
  */
 
 import { unstable_cache } from "next/cache";
+import { orderStandings } from "./split";
 import type { EspnSource } from "./teams";
 import type {
   Article,
@@ -463,10 +464,7 @@ export async function espnStandings(src: EspnSource): Promise<Fetched<StandingsG
 
   function walk(node: Node, parent: string | null) {
     if (node.standings?.entries?.length) {
-      groups.push({
-        name: node.name ?? parent ?? "Standings",
-        parent,
-        rows: node.standings.entries.map((e) => {
+      const rows = node.standings.entries.map((e) => {
           const stat = (n: string) => e.stats?.find((s) => s.name === n);
           const num = (n: string) => {
             const v = stat(n)?.value;
@@ -487,9 +485,12 @@ export async function espnStandings(src: EspnSource): Promise<Fetched<StandingsG
             points: num("points"),
             playoffSeed: num("playoffSeed"),
             differential: stat("pointDifferential")?.displayValue ?? stat("differential")?.displayValue ?? null,
-          } satisfies StandingsRow;
-        }),
+        } satisfies StandingsRow;
       });
+
+      // **받은 순서를 믿지 않는다.** 이유는 `orderStandings` 에 적었다.
+      const { rows: sorted, ordered } = orderStandings(rows);
+      groups.push({ name: node.name ?? parent ?? "Standings", parent, rows: sorted, ordered });
     }
     for (const child of node.children ?? []) walk(child, node.name ?? parent);
   }

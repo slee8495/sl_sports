@@ -69,3 +69,52 @@ export function recordOf(games: Game[]): string | null {
   if (w + l + t === 0) return null;
   return t > 0 ? `${w}-${l}-${t}` : `${w}-${l}`;
 }
+
+/**
+ * 순위표를 실제 순위대로 세운다.
+ *
+ * **ESPN 은 순서를 안 지키고 보낸다.** 2026-09-18 의 AL West 는 애슬레틱스 → 에인절스 →
+ * 애스트로스 순으로 왔는데, 실제로는 애스트로스가 1위고 에인절스가 꼴찌(59-94, 18게임 차)다.
+ * 받은 순서를 그대로 그렸더니 화면이 **에인절스를 지구 2위로 적고 있었다**(소유자가 잡았다).
+ *
+ * 리그마다 순위를 정하는 것이 다르므로 있는 신호를 순서대로 쓴다.
+ *
+ * 1. **플레이오프 시드** — 전부 채워져 있으면 이게 가장 정확하다. 리그가 직접 매긴 순서고,
+ *    같은 승률이라도 타이브레이커까지 반영돼 있다.
+ * 2. **승점** — 하키처럼 승수가 아니라 점수로 줄을 세우는 리그.
+ * 3. **승률, 그다음 승수** — 나머지 전부.
+ * 4. 아무 신호도 없으면(개막 전이라 전부 0) **줄을 세우지 않는다.** 그때는 화면도 번호를
+ *    안 붙인다 — 모르는 순서에 1, 2, 3 을 적는 것이 지금 고친 바로 그 잘못이다.
+ */
+export function orderStandings<T extends {
+  playoffSeed: number | null;
+  points: number | null;
+  winPercent: string | null;
+  wins: number | null;
+  losses: number | null;
+}>(rows: T[]): { rows: T[]; ordered: boolean } {
+  if (rows.length === 0) return { rows, ordered: false };
+
+  if (rows.every((r) => (r.playoffSeed ?? 0) > 0)) {
+    return { rows: [...rows].sort((a, b) => (a.playoffSeed ?? 0) - (b.playoffSeed ?? 0)), ordered: true };
+  }
+
+  if (rows.some((r) => (r.points ?? 0) > 0)) {
+    return { rows: [...rows].sort((a, b) => (b.points ?? 0) - (a.points ?? 0)), ordered: true };
+  }
+
+  // ".386" 처럼 앞의 0 이 빠진 채로 온다. Number(".386") 은 0.386 이라 그대로 읽힌다.
+  const pct = (r: T) => (r.winPercent == null ? null : Number(r.winPercent));
+  const played = rows.some((r) => (r.wins ?? 0) + (r.losses ?? 0) > 0);
+  if (played && rows.some((r) => pct(r) != null && Number.isFinite(pct(r) as number))) {
+    return {
+      rows: [...rows].sort((a, b) => {
+        const d = (pct(b) ?? 0) - (pct(a) ?? 0);
+        return d !== 0 ? d : (b.wins ?? 0) - (a.wins ?? 0);
+      }),
+      ordered: true,
+    };
+  }
+
+  return { rows, ordered: false };
+}
