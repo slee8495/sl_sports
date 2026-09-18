@@ -1,5 +1,6 @@
 import type { Game } from "@/lib/sources/types";
 import { gameLabel, relative, timeLabel } from "@/lib/format";
+import { highlightQuery, searchUrl } from "@/lib/highlight";
 
 /**
  * 화면 여기저기서 같은 모양으로 되풀이되는 조각들.
@@ -78,6 +79,15 @@ export function Side({ game, accent }: { game: Game; accent: string }) {
   );
 }
 
+/** 재생 표시. 하이라이트 링크가 영상이라는 걸 글자 없이 말한다. */
+export function PlayMark() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" aria-hidden className="shrink-0">
+      <path d="M2.5 1.6 10 6 2.5 10.4Z" />
+    </svg>
+  );
+}
+
 /** 표 사러 가는 링크. **홈경기에만** 붙는다 — 원정 티켓은 상대 구단이 판다. */
 export function Tickets({ url, label = "Tickets" }: { url: string; label?: string }) {
   return (
@@ -104,11 +114,14 @@ export function GameRow({
   game,
   accent,
   ticketsUrl,
+  teamName,
 }: {
   game: Game;
   accent: string;
   /** 팀의 티켓 판매처. 앞으로의 홈경기에만 쓴다. */
   ticketsUrl?: string | null;
+  /** 하이라이트를 찾을 때 쓰는 우리 팀 이름. 끝난 경기에만 쓴다. */
+  teamName?: string;
 }) {
   const done = game.status === "final";
   const live = game.status === "in";
@@ -147,6 +160,23 @@ export function GameRow({
             {game.broadcast ? ` · ${game.broadcast}` : ""}
           </span>
           {showTickets && (perGame ? <Tickets url={perGame.url} /> : ticketsUrl ? <Tickets url={ticketsUrl} /> : null)}
+          {/*
+            **끝난 경기에는 하이라이트.** 여기서는 유튜브를 부르지 않고 검색 주소만 만든다 —
+            시즌 전체가 들어 있는 표에서 경기마다 부르면 화면 한 장에 백오십 번 나간다.
+            실제로 영상을 찾아 주는 곳은 "최근 경기" 한 장뿐이다(`page.tsx`).
+          */}
+          {done && teamName && (
+            <a
+              href={searchUrl(highlightQuery(teamName, game))}
+              target="_blank"
+              rel="noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="flex shrink-0 items-center gap-1 text-[11px] font-medium text-dim underline decoration-edge underline-offset-2 hover:text-ink"
+            >
+              <PlayMark />
+              Highlights
+            </a>
+          )}
         </div>
       </div>
 

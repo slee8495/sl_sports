@@ -8,18 +8,21 @@ import { recordOf, splitSchedule } from "@/lib/sources/split";
 import { Ball } from "@/components/Ball";
 import type { Article, Fetched, Game, StandingsGroup, TeamSnapshot } from "@/lib/sources/types";
 import { dayLabel, gameLabel, relative, shortDate, timeLabel } from "@/lib/format";
-import { Empty, Failed, FormStrip, GameRow, LiveDot, scoreline, SectionTitle, Side, Tickets } from "@/components/Bits";
+import { Empty, Failed, FormStrip, GameRow, LiveDot, PlayMark, scoreline, SectionTitle, Side, Tickets } from "@/components/Bits";
+import type { Highlight } from "@/lib/sources/youtube";
 
 type Props = {
   team: Team;
   programs: Fetched<Program[]>;
   news: Fetched<Article[]>;
   live: Fetched<Game | null>;
+  /** 종목별 최근 경기 하이라이트. 서버가 미리 찾아 둔다(`page.tsx`). */
+  highlights: Record<string, Highlight>;
 };
 
 type TabKey = "now" | "schedule" | "roster" | "standings" | "news";
 
-export function TeamView({ team, programs, news, live: liveNow }: Props) {
+export function TeamView({ team, programs, news, live: liveNow, highlights }: Props) {
   /*
     **종목이 화면의 단위다.** 오렌지 루터란은 한 학교가 풋볼도 야구도 하고, 전적도
     순위표도 로스터도 종목마다 다르다. 그래서 고른 종목이 이 화면 전체를 정한다 —
@@ -112,7 +115,16 @@ export function TeamView({ team, programs, news, live: liveNow }: Props) {
 
       <div className="pt-6">
         {active === "now" && (
-          <NowTab team={team} split={split} live={live} injuries={injuries} roster={roster} program={program} failed={programs === null} />
+          <NowTab
+            team={team}
+            split={split}
+            live={live}
+            injuries={injuries}
+            roster={roster}
+            program={program}
+            failed={programs === null}
+            highlight={program ? highlights[program.key] : undefined}
+          />
         )}
         {active === "schedule" && <ScheduleTab team={team} split={split} program={program} failed={programs === null} />}
         {active === "roster" && <RosterTab roster={roster} injuries={injuries} />}
@@ -187,6 +199,7 @@ function NowTab({
   roster,
   program,
   failed,
+  highlight,
 }: {
   team: Team;
   split: ScheduleSplit;
@@ -195,6 +208,7 @@ function NowTab({
   roster: Fetched<Roster>;
   program: Program | null;
   failed: boolean;
+  highlight?: Highlight;
 }) {
   if (failed) return <Failed what="the schedule" />;
 
@@ -244,7 +258,22 @@ function NowTab({
       {split.last && (
         <section>
           <SectionTitle aside={relative(split.last.startsAt)}>Last game</SectionTitle>
-          <GameRow game={split.last} accent={team.colors.primary} />
+          <GameRow game={split.last} accent={team.colors.primary} teamName={team.shortName} />
+          {highlight && (
+            <a
+              href={highlight.url}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-3 inline-flex items-center gap-2 rounded-[3px] border border-edge px-3 py-2 text-xs hover:border-dim"
+            >
+              <PlayMark />
+              {/*
+                찾은 영상이면 제목을 그대로 보여 준다 — 무엇이 열릴지 알고 누르는 것과
+                모르고 누르는 것은 다르다. 못 찾았으면 유튜브 검색으로 간다고 적는다.
+              */}
+              <span className="truncate">{highlight.exact ? (highlight.title ?? "Highlights") : "Search highlights"}</span>
+            </a>
+          )}
         </section>
       )}
 
@@ -405,7 +434,7 @@ function ScheduleTab({
           <SectionTitle aside={recordOf(split.finished) ?? undefined}>Results</SectionTitle>
           <div>
             {[...split.finished].reverse().map((g) => (
-              <GameRow key={g.id} game={g} accent={team.colors.primary} />
+              <GameRow key={g.id} game={g} accent={team.colors.primary} teamName={team.shortName} />
             ))}
           </div>
         </section>

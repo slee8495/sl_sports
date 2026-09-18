@@ -42,6 +42,11 @@ export function shortDate(value: string | Date | null): string {
   return fmt(value, { month: "short", day: "numeric" });
 }
 
+/** "9/17/26" — 유튜브 하이라이트 제목이 쓰는 모양. */
+export function slashDate(value: string | Date | null): string {
+  return fmt(value, { month: "numeric", day: "numeric", year: "2-digit" });
+}
+
 export function yearOf(value: string | Date | null): string {
   return fmt(value, { year: "numeric" });
 }
