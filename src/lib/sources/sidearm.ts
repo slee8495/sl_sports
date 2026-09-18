@@ -19,7 +19,7 @@
  *   있다" 는 것 자체가 팬이 알고 싶은 것이다.
  */
 
-import type { SidearmSource } from "./teams";
+import type { SchoolSource } from "./teams";
 import type { Article, Fetched, Game } from "./types";
 
 const TTL_SCHEDULE = 1_800;
@@ -132,7 +132,7 @@ function parseLinks(description: string): { label: string; url: string }[] {
  * **비시즌에는 빈 배열이 온다** — 야구는 가을에 0건이고 봄이 되면 채워진다. 못 가져온 것과
  * 구분하려고 그 경우에도 null 이 아니라 [] 다.
  */
-export async function sidearmSchedule(src: SidearmSource, sportId: number): Promise<Fetched<Game[]>> {
+export async function sidearmSchedule(src: SchoolSource, sportId: number): Promise<Fetched<Game[]>> {
   const url = `${src.host}/calendar.ashx/calendar.ics?sport_id=${sportId}`;
   let text: string;
   try {
@@ -199,7 +199,7 @@ export async function sidearmSchedule(src: SidearmSource, sportId: number): Prom
  * `path` 로 종목을 거를 수 있지만 걸지 않는다. 학교가 하나고 기사도 몇 개 안 된다 — 풋볼만
  * 걸러 두면 야구 기사가 통째로 안 보인다.
  */
-export async function sidearmNews(src: SidearmSource, limit = 15): Promise<Fetched<Article[]>> {
+export async function sidearmNews(src: SchoolSource, limit = 15): Promise<Fetched<Article[]>> {
   let xml: string;
   try {
     const res = await fetch(`${src.host}/rss.aspx`, {

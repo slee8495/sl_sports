@@ -420,7 +420,11 @@ function RosterTab({ roster, injuries }: { roster: Fetched<Roster>; injuries: Fe
                       )}
                     </p>
                     <p className="truncate text-[11px] text-faint">
-                      {[p.position, p.height, p.weight, p.age ? `${p.age}` : null, p.college]
+                      {/*
+                        리그마다 뜻 있는 칸이 다르다 — 프로는 나이와 출신 대학, 고등학교는
+                        학년(Sr./Jr.)이 그 자리다. 있는 것만 이어 붙인다.
+                      */}
+                      {[p.position, p.height, p.weight, p.experience, p.age ? `${p.age}` : null, p.college]
                         .filter(Boolean)
                         .join(" · ")}
                     </p>

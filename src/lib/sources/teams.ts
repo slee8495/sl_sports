@@ -28,14 +28,31 @@ export type EspnSource = {
   standingsLevel: number;
 };
 
-/** SIDEARM 이 돌리는 학교 사이트. 종목마다 sport_id 가 따로 있다. */
-export type SidearmSource = {
-  kind: "sidearm";
+/**
+ * 학교 팀. **문이 두 개다.**
+ *
+ * 학교 공식 사이트(SIDEARM)는 일정과 학교 기사를 내보내고, 전적·리그 순위표·로스터는
+ * MaxPreps 가 들고 있다. 둘 다 읽어야 이 팀 화면이 다른 여섯 팀만큼 채워진다.
+ */
+export type SchoolSource = {
+  kind: "school";
+  /** 학교 공식 athletics 사이트 — 캘린더(.ics)와 RSS. */
   host: string;
-  programs: { key: string; label: string; sportId: number }[];
+  /** MaxPreps 의 이 팀 주소 앞부분. 뒤에 종목과 /roster/ 가 붙는다. */
+  maxpreps: string;
+  /** MaxPreps 순위표에서 우리를 찾을 때 쓰는 이름. 학교 사이트의 이름과 다를 수 있다. */
+  maxprepsName: string;
+  programs: {
+    key: string;
+    label: string;
+    /** 학교 캘린더의 종목 번호. */
+    sportId: number;
+    /** MaxPreps 주소의 종목 조각. */
+    maxprepsSport: string;
+  }[];
 };
 
-export type Source = EspnSource | SidearmSource;
+export type Source = EspnSource | SchoolSource;
 
 export type Team = {
   /** 주소에 쓰는 키. */
@@ -175,16 +192,18 @@ export const TEAMS: Team[] = [
     logo: "/logos/orange-lutheran.webp",
     homeVenue: null,
     source: {
-      kind: "sidearm",
+      kind: "school",
       host: "https://oluathletics.org",
+      maxpreps: "https://www.maxpreps.com/ca/orange/orange-lutheran-lancers",
+      maxprepsName: "Orange Lutheran",
       /*
         sport_id 는 학교 사이트가 정한 번호다. 눈으로 확인한 값이고(피드의 CALNAME 이
         종목 이름을 그대로 준다), 바뀌면 화면이 빈다 — 그때는 `?sport_id=` 를 0 부터
         훑어 CALNAME 을 읽으면 된다.
       */
       programs: [
-        { key: "football", label: "Football", sportId: 3 },
-        { key: "baseball", label: "Baseball", sportId: 1 },
+        { key: "football", label: "Football", sportId: 3, maxprepsSport: "football" },
+        { key: "baseball", label: "Baseball", sportId: 1, maxprepsSport: "baseball" },
       ],
     },
     tagline: "Lancer Nation",

@@ -17,9 +17,10 @@ import {
   type Injury,
   type Roster,
 } from "./espn";
+import { maxprepsRoster, maxprepsStandings, maxprepsTeam, type SchoolStanding } from "./maxpreps";
 import { sidearmNews, sidearmSchedule } from "./sidearm";
 import { recordOf, splitPrograms } from "./split";
-import { fallbackSnapshot, type Team } from "./teams";
+import { fallbackSnapshot, type SchoolSource, type Team } from "./teams";
 import type { Article, Fetched, Game, StandingsGroup, TeamSnapshot } from "./types";
 
 export type { Injury, Roster };
@@ -33,10 +34,48 @@ export type Program = {
   pastSeason: number | null;
 };
 
+/**
+ * 지금 시즌인 종목.
+ *
+ * 오렌지 루터란은 풋볼과 야구를 같이 챙긴다. 가을에 야구 순위표를, 봄에 풋볼 순위표를
+ * 보여 주면 틀린 건 아니어도 **지금 궁금한 게 아니다.** MaxPreps 가 전적을 주는 쪽이
+ * 곧 지금 하는 종목이라, 달력을 따로 들고 있지 않아도 된다(비시즌에는 전적이 null 이다).
+ */
+async function inSeason(src: SchoolSource): Promise<{ sport: string; standing: SchoolStanding | null }> {
+  const found = await Promise.all(
+    src.programs.map(async (p) => ({ sport: p.maxprepsSport, standing: await maxprepsTeam(src.maxpreps, p.maxprepsSport) })),
+  );
+  const live = found.find((f) => f.standing?.record);
+  return live ?? found[0] ?? { sport: src.programs[0]?.maxprepsSport ?? "", standing: null };
+}
+
 export async function getSnapshot(team: Team): Promise<TeamSnapshot> {
-  if (team.source.kind !== "espn") return fallbackSnapshot(team);
-  const snap = await espnSnapshot(team.source);
-  return snap ?? fallbackSnapshot(team);
+  if (team.source.kind === "espn") {
+    const snap = await espnSnapshot(team.source);
+    return snap ?? fallbackSnapshot(team);
+  }
+
+  const { standing } = await inSeason(team.source);
+  if (!standing) return fallbackSnapshot(team);
+
+  /*
+    한 줄에 리그 순위와 전국/주 랭킹을 같이 적는다 — "1st in Trinity · No. 9 in California".
+    트리니티 리그는 해마다 전국 순위에 올라오는 리그라, 이 팀 팬에게는 리그 안 순위만큼이나
+    밖에서 몇 등인지가 궁금한 것이다. 랭킹은 두 개까지만 — 여섯 개를 늘어놓으면 아무것도 안 읽힌다.
+  */
+  const bits: string[] = [];
+  if (standing.leaguePlacement && standing.leagueName) {
+    bits.push(`${standing.leaguePlacement} in ${standing.leagueName}`);
+  }
+  for (const r of standing.rankings.slice(0, 2)) bits.push(`No. ${r.rank} in ${r.scope}`);
+
+  return {
+    record: standing.record,
+    standingSummary: bits.length ? bits.join(" · ") : null,
+    logo: team.logo,
+    venue: team.homeVenue,
+    venueCity: null,
+  };
 }
 
 /**
@@ -71,9 +110,13 @@ export async function getSchedule(team: Team): Promise<Fetched<Program[]>> {
 }
 
 export async function getRoster(team: Team): Promise<Fetched<Roster>> {
-  // 학교 사이트는 로스터를 내보내는 문이 없다. 없는 것은 없다고 말한다 — 화면이 탭을 접는다.
-  if (team.source.kind !== "espn") return { coaches: [], players: [] };
-  return espnRoster(team.source);
+  if (team.source.kind === "espn") return espnRoster(team.source);
+
+  // 학교 공식 사이트는 로스터를 안 내보낸다. MaxPreps 가 들고 있다(코치진은 거기에도 없다).
+  const { sport } = await inSeason(team.source);
+  const players = await maxprepsRoster(team.source.maxpreps, sport);
+  if (players === null) return null;
+  return { coaches: [], players };
 }
 
 export async function getNews(team: Team, limit = 20): Promise<Fetched<Article[]>> {
@@ -82,8 +125,12 @@ export async function getNews(team: Team, limit = 20): Promise<Fetched<Article[]
 }
 
 export async function getStandings(team: Team): Promise<Fetched<StandingsGroup[]>> {
-  if (team.source.kind !== "espn") return [];
-  return espnStandings(team.source);
+  if (team.source.kind === "espn") return espnStandings(team.source);
+
+  const { standing } = await inSeason(team.source);
+  if (!standing?.leagueUrl) return [];
+  const label = standing.leagueName ? `${standing.leagueName} League` : "League";
+  return maxprepsStandings(standing.leagueUrl, team.source.maxprepsName, label);
 }
 
 export async function getInjuries(team: Team): Promise<Fetched<Injury[]>> {
