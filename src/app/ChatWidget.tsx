@@ -97,7 +97,7 @@ export function ChatWidget() {
     <>
       {open && (
         <div
-          className="fixed bottom-20 right-4 z-20 flex h-[70vh] max-h-[560px] w-[calc(100vw-2rem)] max-w-sm flex-col overflow-hidden rounded-[4px] border border-edge bg-riser shadow-[0_24px_48px_-20px_rgba(0,0,0,.9)]"
+          className="fixed bottom-20 right-4 z-20 flex h-[70vh] max-h-[560px] w-[calc(100vw-2rem)] max-w-sm flex-col overflow-hidden rounded-[4px] border border-edge bg-riser shadow-[0_24px_48px_-20px_rgba(16,20,28,.35)]"
           style={{ marginBottom: "env(safe-area-inset-bottom)" }}
         >
           <div className="flex items-center justify-between border-b border-edge px-4 py-3">
@@ -112,7 +112,7 @@ export function ChatWidget() {
               >
                 {autoSpeak ? "🔊" : "🔇"}
               </button>
-              <button onClick={() => setOpen(false)} className="text-faint hover:text-chalk">
+              <button onClick={() => setOpen(false)} className="text-faint hover:text-ink">
                 ✕
               </button>
             </div>
@@ -130,8 +130,8 @@ export function ChatWidget() {
                   <div
                     className={`inline-block max-w-[85%] rounded-[4px] px-3 py-2 text-sm ${
                       message.role === "user"
-                        ? "bg-chalk text-ground"
-                        : "bg-riser-2 text-chalk"
+                        ? "bg-ink text-ground"
+                        : "bg-riser-2 text-ink"
                     }`}
                   >
                     {message.parts.map((part, i) =>
@@ -148,7 +148,7 @@ export function ChatWidget() {
                       disabled={loadingSpeakId === message.id}
                       aria-label="Read this reply aloud"
                       title="Read aloud"
-                      className="ml-1 align-middle text-xs text-faint hover:text-chalk disabled:opacity-50"
+                      className="ml-1 align-middle text-xs text-faint hover:text-ink disabled:opacity-50"
                     >
                       {loadingSpeakId === message.id ? "…" : "🔊"}
                     </button>
@@ -173,7 +173,7 @@ export function ChatWidget() {
               onChange={(e) => setInput(e.target.value)}
               disabled={status !== "ready"}
               placeholder={recording ? "Listening…" : transcribing ? "Transcribing…" : "Ask a question…"}
-              className="min-w-0 flex-1 rounded-[3px] border border-edge bg-transparent px-3 py-1.5 text-sm text-chalk outline-none placeholder:text-faint focus:border-dim"
+              className="min-w-0 flex-1 rounded-[3px] border border-edge bg-transparent px-3 py-1.5 text-sm text-ink outline-none placeholder:text-faint focus:border-dim"
             />
             <button
               type="button"
@@ -193,7 +193,7 @@ export function ChatWidget() {
             <button
               type="submit"
               disabled={status !== "ready"}
-              className="rounded-[3px] bg-chalk px-3 py-1.5 text-sm font-medium text-ground disabled:opacity-40"
+              className="rounded-[3px] bg-ink px-3 py-1.5 text-sm font-medium text-ground disabled:opacity-40"
             >
               Send
             </button>
@@ -203,7 +203,7 @@ export function ChatWidget() {
 
       <button
         onClick={() => setOpen((o) => !o)}
-        className="fixed bottom-4 right-4 z-20 flex h-12 w-12 items-center justify-center rounded-full border border-edge bg-riser text-lg text-chalk shadow-[0_10px_24px_-10px_rgba(0,0,0,.9)]"
+        className="fixed bottom-4 right-4 z-20 flex h-12 w-12 items-center justify-center rounded-full border border-edge bg-riser text-lg text-ink shadow-[0_10px_24px_-10px_rgba(16,20,28,.45)]"
         style={{ marginBottom: "env(safe-area-inset-bottom)" }}
         aria-label="Chat"
       >

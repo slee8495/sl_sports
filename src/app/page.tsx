@@ -69,7 +69,7 @@ function Headline({ card, live }: { card: ShelfCard; live: boolean }) {
       <div className="flex items-start gap-4">
         <span
           className="mt-1 h-12 w-12 shrink-0 rounded-[3px] p-1.5"
-          style={{ background: `${card.team.colors.primary}1f` }}
+          style={{ background: `${card.team.colors.primary}14` }}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={card.snapshot.logo ?? card.team.logo} alt="" className="h-full w-full object-contain" />
@@ -111,10 +111,14 @@ function Cover({ card }: { card: ShelfCard }) {
   return (
     <Link href={`/team/${team.slug}`} className="group block">
       <div
-        className="relative aspect-[3/4] overflow-hidden rounded-[3px] bg-riser transition-transform duration-200 group-hover:-translate-y-1"
+        className="relative aspect-[3/4] overflow-hidden rounded-[3px] border border-edge bg-riser transition-transform duration-200 group-hover:-translate-y-1"
+        /*
+          밝은 바탕에서는 팀색을 어두울 때만큼 넣으면 표지가 물든 종이처럼 보인다.
+          번짐은 절반으로 줄이고, 대신 그림자를 또렷하게 해서 표지가 선반 위에 놓이게 했다.
+        */
         style={{
-          boxShadow: "0 10px 20px -12px rgba(0,0,0,.8)",
-          backgroundImage: `radial-gradient(120% 90% at 50% 38%, ${team.colors.primary}2e 0%, transparent 62%)`,
+          boxShadow: "0 10px 20px -14px rgba(16,20,28,.5)",
+          backgroundImage: `radial-gradient(120% 90% at 50% 38%, ${team.colors.primary}1a 0%, transparent 64%)`,
         }}
       >
         {/* 책등. 이 색이 곧 팀 이름이다. */}
@@ -136,7 +140,7 @@ function Cover({ card }: { card: ShelfCard }) {
             <img
               src={snapshot.logo ?? team.logo}
               alt={team.name}
-              className="max-h-[62%] w-[66%] object-contain drop-shadow-[0_6px_14px_rgba(0,0,0,.55)]"
+              className="max-h-[62%] w-[66%] object-contain drop-shadow-[0_5px_12px_rgba(16,20,28,.22)]"
             />
           </div>
 

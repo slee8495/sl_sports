@@ -5,19 +5,22 @@
 
   응원하는 일곱 팀의 색이 전부 세다(차저스 파우더 블루, 엔젤스 빨강, 덕스 주황…). 프레임까지
   색을 가지면 서로 싸우고, 결국 어느 팀 화면인지 색으로 알 수 없게 된다. 그래서 틀은 전부
-  무채색 한 벌이고, 채도는 로고와 팀 페이지가 가져간다 — 팀 화면에 들어가면 `--team` 이
-  그 팀 색으로 바뀌고 화면 전체가 그 색을 쓴다.
+  무채색 한 벌이고, 채도는 로고와 팀 페이지가 가져간다.
+
+  바탕은 **밝은 종이**다. 처음에는 어두운 판으로 만들었는데(2026-09), 소유자가 밝게 바꿔
+  달라고 했다. 밝은 쪽이 맞는 이유도 있다 — 팀 로고는 대개 흰 바탕을 전제로 그려져 있어서,
+  어두운 판에서는 검은 획이 묻히고 테두리가 사라진다. 서가라는 비유에도 종이 쪽이 가깝다.
 */
 @theme {
-  --color-ground: #101215;
-  --color-riser: #171a1f;
-  --color-riser-2: #1d2128;
-  --color-edge: #272b33;
-  --color-chalk: #edeff2;
-  --color-dim: #8b939e;
-  --color-faint: #5b626c;
-  --color-win: #3fb27f;
-  --color-loss: #d8574b;
+  --color-ground: #f5f6f8;
+  --color-riser: #ffffff;
+  --color-riser-2: #edeff3;
+  --color-edge: #dee2e8;
+  --color-ink: #14171c;
+  --color-dim: #59626f;
+  --color-faint: #8a94a2;
+  --color-win: #157f4b;
+  --color-loss: #c3352b;
 
   --font-display: var(--font-archivo);
   --font-sans: var(--font-archivo);
@@ -30,9 +33,9 @@ html {
 
 body {
   /* 바닥이 완전히 평평하면 카드가 떠 있는 게 아니라 떠다니는 것처럼 보인다. */
-  background-image: linear-gradient(180deg, #0d0f12 0%, #101215 38%, #14171c 100%);
+  background-image: linear-gradient(180deg, #f8f9fb 0%, #f4f5f8 45%, #eef0f4 100%);
   background-attachment: fixed;
-  color: var(--color-chalk);
+  color: var(--color-ink);
   font-family: var(--font-sans), system-ui, sans-serif;
 }
 
@@ -52,7 +55,7 @@ body {
 }
 
 :focus-visible {
-  outline: 2px solid var(--color-chalk);
+  outline: 2px solid var(--color-ink);
   outline-offset: 2px;
   border-radius: 2px;
 }

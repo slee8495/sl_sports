@@ -63,7 +63,7 @@ export function TeamView(props: Props) {
             key={t.key}
             onClick={() => setTab(t.key)}
             className={`-mb-px shrink-0 border-b-2 pb-2.5 text-[13px] font-medium transition-colors ${
-              tab === t.key ? "text-chalk" : "border-transparent text-faint hover:text-dim"
+              tab === t.key ? "text-ink" : "border-transparent text-faint hover:text-dim"
             }`}
             style={tab === t.key ? { borderColor: team.colors.primary } : undefined}
           >
@@ -107,9 +107,9 @@ function Hero({
 }) {
   return (
     <header
-      className="relative overflow-hidden rounded-[4px] p-5 pl-6"
+      className="relative overflow-hidden rounded-[4px] border border-edge p-5 pl-6"
       style={{
-        backgroundImage: `linear-gradient(115deg, ${team.colors.primary}33 0%, ${team.colors.primary}0d 45%, transparent 75%)`,
+        backgroundImage: `linear-gradient(115deg, ${team.colors.primary}26 0%, ${team.colors.primary}08 45%, transparent 75%)`,
         backgroundColor: "var(--color-riser)",
       }}
     >
@@ -323,9 +323,9 @@ function ScheduleTab({ team, programs }: { team: Team; programs: Fetched<Program
               key={p.key}
               onClick={() => setProgramKey(p.key)}
               className={`rounded-[2px] border px-3 py-1.5 text-xs transition-colors ${
-                p.key === active.key ? "border-transparent text-chalk" : "border-edge text-faint hover:text-dim"
+                p.key === active.key ? "border-transparent font-medium text-ink" : "border-edge text-faint hover:text-dim"
               }`}
-              style={p.key === active.key ? { background: `${team.colors.primary}2e` } : undefined}
+              style={p.key === active.key ? { background: `${team.colors.primary}1f` } : undefined}
             >
               {p.label}
               <span className="ml-1.5 text-faint tnum">{p.games.length}</span>
@@ -471,7 +471,7 @@ function StandingsTab({ standings, accent }: { standings: Fetched<StandingsGroup
                   <tr
                     key={r.teamId ?? r.name}
                     className="border-t border-edge/70"
-                    style={r.isUs ? { background: `${accent}1a` } : undefined}
+                    style={r.isUs ? { background: `${accent}12` } : undefined}
                   >
                     <td className="py-2 pr-2">
                       <div className="flex items-center gap-2">
