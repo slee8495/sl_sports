@@ -7,7 +7,7 @@ import type { Injury, Program, Roster } from "@/lib/sources";
 import { recordOf, splitPrograms } from "@/lib/sources/split";
 import type { Article, Fetched, Game, StandingsGroup, TeamSnapshot } from "@/lib/sources/types";
 import { dayLabel, gameLabel, relative, shortDate, timeLabel } from "@/lib/format";
-import { Empty, Failed, FormStrip, GameRow, LiveDot, matchup, scoreline, SectionTitle } from "@/components/Bits";
+import { Empty, Failed, FormStrip, GameRow, LiveDot, scoreline, SectionTitle } from "@/components/Bits";
 
 type Props = {
   team: Team;
