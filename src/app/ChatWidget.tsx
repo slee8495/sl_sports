@@ -97,11 +97,11 @@ export function ChatWidget() {
     <>
       {open && (
         <div
-          className="fixed bottom-20 right-4 z-20 flex h-[70vh] max-h-[560px] w-[calc(100vw-2rem)] max-w-sm flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-xl dark:border-zinc-800 dark:bg-zinc-950"
+          className="fixed bottom-20 right-4 z-20 flex h-[70vh] max-h-[560px] w-[calc(100vw-2rem)] max-w-sm flex-col overflow-hidden rounded-[4px] border border-edge bg-riser shadow-[0_24px_48px_-20px_rgba(0,0,0,.9)]"
           style={{ marginBottom: "env(safe-area-inset-bottom)" }}
         >
-          <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
-            <span className="text-sm font-semibold">🤖 Ask about your teams</span>
+          <div className="flex items-center justify-between border-b border-edge px-4 py-3">
+            <span className="wide text-sm font-semibold">Ask about the teams</span>
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setAutoSpeak((v) => !v)}
@@ -112,7 +112,7 @@ export function ChatWidget() {
               >
                 {autoSpeak ? "🔊" : "🔇"}
               </button>
-              <button onClick={() => setOpen(false)} className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300">
+              <button onClick={() => setOpen(false)} className="text-faint hover:text-chalk">
                 ✕
               </button>
             </div>
@@ -120,18 +120,18 @@ export function ChatWidget() {
 
           <div className="flex-1 overflow-y-auto px-4 py-3">
             {messages.length === 0 && (
-              <p className="text-sm text-zinc-500">
-                Ask things like &quot;when do the Padres play next?&quot; or &quot;what&apos;s the latest LAFC news?&quot;
+              <p className="text-sm text-faint">
+                Try &quot;when do the Chargers play next?&quot; or &quot;who\u2019s hurt on the Ducks?&quot;
               </p>
             )}
             <div className="flex flex-col gap-3">
               {messages.map((message) => (
                 <div key={message.id} className={message.role === "user" ? "text-right" : "text-left"}>
                   <div
-                    className={`inline-block max-w-[85%] rounded-xl px-3 py-2 text-sm ${
+                    className={`inline-block max-w-[85%] rounded-[4px] px-3 py-2 text-sm ${
                       message.role === "user"
-                        ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
-                        : "bg-zinc-100 text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100"
+                        ? "bg-chalk text-ground"
+                        : "bg-riser-2 text-chalk"
                     }`}
                   >
                     {message.parts.map((part, i) =>
@@ -148,14 +148,14 @@ export function ChatWidget() {
                       disabled={loadingSpeakId === message.id}
                       aria-label="Read this reply aloud"
                       title="Read aloud"
-                      className="ml-1 align-middle text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 disabled:opacity-50"
+                      className="ml-1 align-middle text-xs text-faint hover:text-chalk disabled:opacity-50"
                     >
                       {loadingSpeakId === message.id ? "…" : "🔊"}
                     </button>
                   )}
                 </div>
               ))}
-              {status === "submitted" && <div className="text-sm text-zinc-400">Thinking…</div>}
+              {status === "submitted" && <div className="text-sm text-faint">Checking…</div>}
             </div>
           </div>
 
@@ -166,14 +166,14 @@ export function ChatWidget() {
               sendMessage({ text: input });
               setInput("");
             }}
-            className="flex gap-2 border-t border-zinc-200 p-3 dark:border-zinc-800"
+            className="flex gap-2 border-t border-edge p-3"
           >
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
               disabled={status !== "ready"}
               placeholder={recording ? "Listening…" : transcribing ? "Transcribing…" : "Ask a question…"}
-              className="min-w-0 flex-1 rounded-lg border border-zinc-200 bg-transparent px-3 py-1.5 text-sm outline-none focus:border-zinc-400 dark:border-zinc-700"
+              className="min-w-0 flex-1 rounded-[3px] border border-edge bg-transparent px-3 py-1.5 text-sm text-chalk outline-none placeholder:text-faint focus:border-dim"
             />
             <button
               type="button"
@@ -182,10 +182,10 @@ export function ChatWidget() {
               aria-pressed={recording}
               aria-label={recording ? "Stop recording" : "Ask by voice"}
               title={recording ? "Stop recording" : "Ask by voice"}
-              className={`rounded-lg px-3 py-1.5 text-sm disabled:opacity-40 ${
+              className={`rounded-[3px] px-3 py-1.5 text-sm disabled:opacity-40 ${
                 recording
-                  ? "bg-red-600 text-white"
-                  : "border border-zinc-200 text-zinc-600 dark:border-zinc-700 dark:text-zinc-300"
+                  ? "bg-loss text-white"
+                  : "border border-edge text-dim"
               }`}
             >
               {recording ? "⏹" : "🎤"}
@@ -193,7 +193,7 @@ export function ChatWidget() {
             <button
               type="submit"
               disabled={status !== "ready"}
-              className="rounded-lg bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-40 dark:bg-zinc-100 dark:text-zinc-900"
+              className="rounded-[3px] bg-chalk px-3 py-1.5 text-sm font-medium text-ground disabled:opacity-40"
             >
               Send
             </button>
@@ -203,7 +203,7 @@ export function ChatWidget() {
 
       <button
         onClick={() => setOpen((o) => !o)}
-        className="fixed bottom-4 right-4 z-20 flex h-12 w-12 items-center justify-center rounded-full bg-zinc-900 text-xl text-white shadow-lg dark:bg-zinc-100 dark:text-zinc-900"
+        className="fixed bottom-4 right-4 z-20 flex h-12 w-12 items-center justify-center rounded-full border border-edge bg-riser text-lg text-chalk shadow-[0_10px_24px_-10px_rgba(0,0,0,.9)]"
         style={{ marginBottom: "env(safe-area-inset-bottom)" }}
         aria-label="Chat"
       >

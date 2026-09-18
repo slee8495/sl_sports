@@ -1,26 +1,85 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/*
+  이 앱은 **자기 색이 없다 — 팀 색을 빌린다.**
+
+  응원하는 일곱 팀의 색이 전부 세다(차저스 파우더 블루, 엔젤스 빨강, 덕스 주황…). 프레임까지
+  색을 가지면 서로 싸우고, 결국 어느 팀 화면인지 색으로 알 수 없게 된다. 그래서 틀은 전부
+  무채색 한 벌이고, 채도는 로고와 팀 페이지가 가져간다 — 팀 화면에 들어가면 `--team` 이
+  그 팀 색으로 바뀌고 화면 전체가 그 색을 쓴다.
+*/
+@theme {
+  --color-ground: #101215;
+  --color-riser: #171a1f;
+  --color-riser-2: #1d2128;
+  --color-edge: #272b33;
+  --color-chalk: #edeff2;
+  --color-dim: #8b939e;
+  --color-faint: #5b626c;
+  --color-win: #3fb27f;
+  --color-loss: #d8574b;
+
+  --font-display: var(--font-archivo);
+  --font-sans: var(--font-archivo);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  background-color: var(--color-ground);
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  /* 바닥이 완전히 평평하면 카드가 떠 있는 게 아니라 떠다니는 것처럼 보인다. */
+  background-image: linear-gradient(180deg, #0d0f12 0%, #101215 38%, #14171c 100%);
+  background-attachment: fixed;
+  color: var(--color-chalk);
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+/*
+  **숫자는 자리를 지킨다.** 점수·전적·순위표가 이 앱의 절반인데, 비례폭 숫자는 1 이 들어간
+  칸만 좁아져서 표가 흔들린다.
+*/
+.tnum {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+/* 헤드라인은 폭을 넓혀 쓴다 — 유니폼 등번호의 인상. 본문은 기본 폭 그대로. */
+.wide {
+  font-stretch: 125%;
+  letter-spacing: -0.02em;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-chalk);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* 진행 중인 경기에만 붙는 유일한 움직임. 그 외에는 아무것도 안 움직인다. */
+@keyframes live-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+.live-dot {
+  animation: live-pulse 1.8s ease-in-out infinite;
+}
+
+/* 가로로 미는 줄(서가, 탭)에서 스크롤바를 숨긴다 — 손으로 미는 화면이다. */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }

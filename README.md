@@ -1,36 +1,83 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SL Sports
 
-## Getting Started
+내가 응원하는 일곱 팀을 한 화면에. 첫 화면은 팀 로고가 꽂힌 **서가**고, 표지를 고르면
+그 팀의 다음 경기·일정·로스터·순위표·부상자·뉴스가 나온다.
 
-First, run the development server:
+골수팬용이다. 입문자에게 종목을 설명하지 않는다 — 다음 홈경기가 언제인지, 누가 다쳤는지,
+지금 몇 위인지를 **빨리** 보여 주는 것이 전부다.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+| 팀 | 리그 | 출처 |
+| --- | --- | --- |
+| Los Angeles Chargers | NFL | ESPN |
+| Los Angeles Angels | MLB | ESPN |
+| LA Clippers | NBA | ESPN |
+| Anaheim Ducks | NHL | ESPN |
+| San Diego State Aztecs | Pac-12 풋볼 | ESPN |
+| UC San Diego Tritons | Big West 농구 | ESPN |
+| Orange Lutheran Lancers | Trinity League 풋볼·야구 | 학교 공식 캘린더 |
+
+**배포:** Vercel · 태평양 시간으로 그린다(팀도 나도 남부 캘리포니아에 있다).
+
+---
+
+## 어디서 가져오나
+
+**모델을 안 태운다.** 공개 JSON 을 그냥 읽는다 — 비용이 0 이고, 지어낼 자리가 없다.
+
+- **ESPN** `site.api.espn.com` — 키 없음. 일정·로스터·코치·순위표·뉴스·부상자·라이브 스코어.
+- **오렌지 루터란** `oluathletics.org` — 고등학교는 ESPN 에 아예 없다(검색해도 0건). 학교가
+  스스로 내보내는 **캘린더 피드(.ics)** 와 **RSS** 를 읽는다. 상대·홈/원정·결과·구장·중계
+  링크까지 거기 다 있다. 스크래핑이 아니라 내보내라고 만든 문이라 잘 안 부러진다.
+
+### 예전 구조 (2026-09 에 걷어냄)
+
+매일 크론이 돌면서 Claude 에게 팀마다 웹 검색을 시키고, 그 결과를 Postgres 에 적어 두고,
+화면은 그 표를 읽었다. 그게 이 앱의 유일한 고정 비용이었고(8월에 그래서 크론을 껐다),
+데이터는 늘 하루쯤 낡아 있었으며, 가끔 모델이 없는 경기를 지어냈다.
+
+지금은 **화면을 열 때 그 자리에서 읽는다.** 크론도 DB 도 없다. 되살릴 것도 없다.
+
+## 구조
+
+```
+src/lib/sources/
+  teams.ts     일곱 팀 표. 팀을 더하고 빼는 일은 여기 한 줄을 고치는 일이다.
+  espn.ts      ESPN 어댑터
+  sidearm.ts   학교 캘린더(.ics)·RSS 어댑터
+  index.ts     화면이 부르는 창구. 어느 출처인지는 여기서 갈리고 여기서 끝난다.
+  split.ts     일정을 다음 경기·다음 홈경기·최근 경기로 가르는 셈(바깥을 안 부른다)
+src/app/
+  page.tsx           서가
+  team/[slug]/       팀 화면 (Now · Schedule · Roster · Standings · News)
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+값은 Next 데이터 캐시가 들고 있고 TTL 은 종류마다 다르다 — 점수는 1분, 일정은 15분,
+로스터는 6시간. **일정만은 받은 JSON 이 아니라 추려 낸 결과를 캐시한다**: MLB 의 162경기
+일정이 3.7MB 라 2MB 한도를 넘어 캐시를 조용히 빠져나갔다(`espn.ts` 의 `readFresh` 참고).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 규칙
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **못 가져온 것과 없는 것은 다르다.** `null` 이 "못 가져왔다" 이고 `[]` 가 "없다" 다.
+  화면도 다르게 적는다 — 하나는 기다리는 것이고 하나는 새로고침이다.
+- **없는 칸은 접는다.** 오렌지 루터란에는 로스터도 순위표도 없다. 빈 탭을 남기면 고장처럼 보인다.
+- **시각은 늘 태평양 시간.** 브라우저 시간대에 맡기면 서버가 그린 글자와 어긋난다.
+- **앱은 자기 색이 없다.** 틀은 무채색이고, 색은 팀이 가진다.
 
-## Learn More
+## 셋업
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm install
+npm run dev
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+환경 변수는 챗 어시스턴트와 SLKeyboard 엔드포인트에만 필요하다. 팀 데이터는 키가 없다.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| 변수 | 쓰는 곳 |
+| --- | --- |
+| `KEYBOARD_API_KEY` | `/api/transcribe`, `/api/correct` (SLKeyboard 앱이 부른다) |
 
-## Deploy on Vercel
+AI Gateway 는 Vercel OIDC 로 붙는다(`/api/chat`, `/api/speak`). **팀 데이터는 모델을 안 쓴다.**
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 아이콘
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+천장에 걸린 우승 배너. `python3 assets/icon/gen_icon.py` 로 다시 만든다.

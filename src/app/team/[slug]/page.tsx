@@ -1,66 +1,62 @@
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
+import { findTeam, TEAMS } from "@/lib/sources/teams";
 import {
-  getTeamBySlug,
-  getTeamRoster,
-  getTeamNews,
-  getTeamHighlights,
-  getTeamPodcasts,
-  getUpcomingGames,
-  getRecentGames,
-} from "@/lib/data";
-import { getTeamColor, SPORT_EMOJI } from "@/lib/teamTheme";
-import { TeamTabs } from "./TeamTabs";
+  getInjuries,
+  getLive,
+  getNews,
+  getRoster,
+  getSchedule,
+  getSnapshot,
+  getStandings,
+} from "@/lib/sources";
+import { TeamView } from "./TeamView";
 
 export const dynamic = "force-dynamic";
 
+export async function generateStaticParams() {
+  return TEAMS.map((t) => ({ slug: t.slug }));
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const team = findTeam(slug);
+  return { title: team ? `${team.name} · SL Sports` : "SL Sports" };
+}
+
 export default async function TeamPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const team = await getTeamBySlug(slug);
+  const team = findTeam(slug);
   if (!team) notFound();
 
-  const [roster, news, highlightsList, podcasts, upcoming, recent] = await Promise.all([
-    getTeamRoster(team.id),
-    getTeamNews(team.id),
-    getTeamHighlights(team.id),
-    getTeamPodcasts(team.id),
-    getUpcomingGames(team.id),
-    getRecentGames(team.id),
+  /*
+    **전부 동시에 부른다.** 탭을 누를 때마다 부르면 누를 때마다 기다리고, 줄 세워 부르면
+    한 화면에 대여섯 번의 왕복이 쌓인다. 캐시가 앞에 있어서 대부분은 아예 안 나간다.
+  */
+  const [snapshot, programs, roster, standings, news, injuries, live] = await Promise.all([
+    getSnapshot(team),
+    getSchedule(team),
+    getRoster(team),
+    getStandings(team),
+    getNews(team, 18),
+    getInjuries(team),
+    getLive(team),
   ]);
 
-  const color = getTeamColor(team.slug);
-
   return (
-    <div className="flex flex-col gap-6">
-      <div
-        className="-mx-4 -mt-6 flex items-center gap-4 px-4 py-6 text-white sm:mx-0 sm:mt-0 sm:rounded-2xl"
-        style={{ background: `linear-gradient(135deg, ${color} 0%, #0a0f1f 130%)` }}
-      >
-        {team.logoUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={team.logoUrl} alt="" className="h-14 w-14 shrink-0 rounded-full bg-white object-contain p-1" />
-        ) : (
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-white/15 text-2xl">
-            {SPORT_EMOJI[team.sport] ?? ""}
-          </div>
-        )}
-        <div className="min-w-0">
-          <h1 className="truncate text-2xl font-semibold tracking-tight">{team.name}</h1>
-          <p className="text-sm text-white/80">
-            {team.league} · {team.country}
-          </p>
-        </div>
-      </div>
-
-      <TeamTabs
-        team={team}
-        color={color}
-        roster={roster}
-        news={news}
-        highlightsList={highlightsList}
-        podcasts={podcasts}
-        upcoming={upcoming}
-        recent={recent}
-      />
-    </div>
+    <TeamView
+      team={team}
+      snapshot={snapshot}
+      programs={programs}
+      roster={roster}
+      standings={standings}
+      news={news}
+      injuries={injuries}
+      live={live}
+    />
   );
 }
