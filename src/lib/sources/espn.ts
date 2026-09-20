@@ -137,6 +137,13 @@ function logoOf(t: EspnTeamRef | undefined): string | null {
   return full?.href ?? t.logos?.[0]?.href ?? null;
 }
 
+/** ".667" — 앞의 0 을 떼는 것이 스포츠 표의 관례다. 한 판도 안 했으면 없는 값이다. */
+function percentOf(w: number | null, l: number | null, t: number | null): string | null {
+  const played = (w ?? 0) + (l ?? 0) + (t ?? 0);
+  if (played === 0) return null;
+  return (((w ?? 0) + (t ?? 0) / 2) / played).toFixed(3).replace(/^0/, "");
+}
+
 function scoreOf(c: EspnCompetitor | undefined): number | null {
   const raw = c?.score;
   if (raw == null) return null;
@@ -449,7 +456,7 @@ export async function espnStandings(src: EspnSource): Promise<Fetched<StandingsG
     standings?: {
       entries?: {
         team?: EspnTeamRef;
-        stats?: { name?: string; value?: number; displayValue?: string }[];
+        stats?: { name?: string; type?: string; value?: number; displayValue?: string }[];
       }[];
     };
   };
@@ -466,6 +473,14 @@ export async function espnStandings(src: EspnSource): Promise<Fetched<StandingsG
     if (node.standings?.entries?.length) {
       const rows = node.standings.entries.map((e) => {
           const stat = (n: string) => e.stats?.find((s) => s.name === n);
+          /*
+            **대학은 `losses` 를 아예 안 보낸다.** 대신 `type: "total"` 에 "1-1" 이라는
+            문자열이 들어 있다. 이름으로만 찾고 있었더니 승수만 뜨고 패수 칸이 비어
+            있었다(소유자 지적). 있는 쪽을 쓰고, 없으면 문자열을 갈라 쓴다.
+          */
+          const byType = (t: string) => e.stats?.find((s) => s.type === t)?.displayValue ?? null;
+          const parts = (byType("total") ?? "").split("-").map((x) => Number(x.trim()));
+          const fromRecord = (i: number) => (Number.isFinite(parts[i]) ? parts[i] : null);
           const num = (n: string) => {
             const v = stat(n)?.value;
             return typeof v === "number" ? Math.round(v) : null;
@@ -476,15 +491,20 @@ export async function espnStandings(src: EspnSource): Promise<Fetched<StandingsG
             abbreviation: e.team?.abbreviation ?? null,
             logo: logoOf(e.team),
             isUs: e.team?.id === src.teamId,
-            wins: num("wins"),
-            losses: num("losses"),
-            ties: num("ties"),
-            winPercent: stat("winPercent")?.displayValue ?? null,
+            wins: num("wins") ?? fromRecord(0),
+            losses: num("losses") ?? fromRecord(1),
+            ties: num("ties") ?? fromRecord(2),
+            /*
+              승률도 대학에는 없다. 전적이 있으면 직접 센다 — 무승부는 반 승으로,
+              이건 미식축구·축구가 쓰는 셈법이다.
+            */
+            winPercent: stat("winPercent")?.displayValue ?? percentOf(num("wins") ?? fromRecord(0), num("losses") ?? fromRecord(1), num("ties") ?? fromRecord(2)),
             gamesBehind: stat("gamesBehind")?.displayValue ?? null,
             streak: stat("streak")?.displayValue ?? null,
             points: num("points"),
             playoffSeed: num("playoffSeed"),
             differential: stat("pointDifferential")?.displayValue ?? stat("differential")?.displayValue ?? null,
+            conferenceRecord: byType("vsconf"),
         } satisfies StandingsRow;
       });
 

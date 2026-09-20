@@ -117,6 +117,8 @@ export async function maxprepsTeam(base: string, sport: string): Promise<Fetched
 /* ────────────────────────────── 리그 순위표 ────────────────────────────── */
 
 type LeagueRow = {
+  contextWins?: number;
+  contextLosses?: number;
   schoolName?: string;
   schoolNameAcronym?: string;
   schoolMascotUrl?: string;
@@ -163,6 +165,9 @@ async function fetchStandings(
         points: null,
         playoffSeed: r.contextStandingPlacement ?? null,
         differential: diff == null ? null : diff > 0 ? `+${diff}` : String(diff),
+        // 리그 경기는 시즌 중반에 시작한다. 그 전에는 0-0 이고, 그것도 사실이다.
+        conferenceRecord:
+          r.contextWins != null && r.contextLosses != null ? `${r.contextWins}-${r.contextLosses}` : null,
       } satisfies StandingsRow;
     });
 

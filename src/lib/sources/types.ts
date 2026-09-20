@@ -94,6 +94,14 @@ export type StandingsRow = {
   playoffSeed: number | null;
   /** 득실 — "+15". */
   differential: string | null;
+  /**
+   * 리그(컨퍼런스) 안에서의 전적 — "0-0".
+   *
+   * 대학은 **전체 전적과 컨퍼런스 전적이 다른 이야기다.** 비컨퍼런스 경기를 몇 개 치르고
+   * 나서야 리그 경기가 시작되고, 순위를 가르는 것은 뒤쪽이다. 없는 리그에서는 null 이라
+   * 화면이 칸을 안 그린다.
+   */
+  conferenceRecord: string | null;
 };
 
 export type StandingsGroup = {

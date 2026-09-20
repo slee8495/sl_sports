@@ -540,7 +540,14 @@ function StandingsTab({ standings, accent }: { standings: Fetched<StandingsGroup
 
   return (
     <div className="flex flex-col gap-8">
-      {standings.map((group) => (
+      {standings.map((group) => {
+        /*
+          **리그마다 뜻 있는 칸이 다르다.** 대학은 컨퍼런스 전적이 순위를 가르는 값이라
+          그 칸이 있어야 하고, 프로 디비전 표에는 그런 칸이 아예 없다. 한 팀이라도 값이
+          있을 때만 칸을 그린다 — 빈 칸만 늘어선 열은 표를 좁힐 뿐이다.
+        */
+        const showConf = group.rows.some((r) => r.conferenceRecord);
+        return (
         <section key={`${group.parent ?? ""}-${group.name}`}>
           <SectionTitle aside={group.parent ?? undefined}>{group.name}</SectionTitle>
 
@@ -553,6 +560,7 @@ function StandingsTab({ standings, accent }: { standings: Fetched<StandingsGroup
                   <th className="pb-2 text-right font-normal">W</th>
                   <th className="pb-2 text-right font-normal">L</th>
                   <th className="pb-2 text-right font-normal">PCT</th>
+                  {showConf && <th className="pb-2 text-right font-normal">CONF</th>}
                   <th className="pb-2 text-right font-normal">GB</th>
                   <th className="pb-2 text-right font-normal">STRK</th>
                 </tr>
@@ -580,6 +588,7 @@ function StandingsTab({ standings, accent }: { standings: Fetched<StandingsGroup
                     <td className="py-2 text-right">{r.wins ?? "—"}</td>
                     <td className="py-2 text-right">{r.losses ?? "—"}</td>
                     <td className="py-2 text-right text-dim">{r.winPercent ?? "—"}</td>
+                    {showConf && <td className="py-2 text-right text-dim">{r.conferenceRecord ?? "—"}</td>}
                     <td className="py-2 text-right text-dim">{r.gamesBehind ?? "—"}</td>
                     <td className="py-2 text-right text-dim">{r.streak ?? "—"}</td>
                   </tr>
@@ -588,7 +597,8 @@ function StandingsTab({ standings, accent }: { standings: Fetched<StandingsGroup
             </table>
           </div>
         </section>
-      ))}
+        );
+      })}
     </div>
   );
 }
