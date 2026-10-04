@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 """SL Sports 앱 마크 — 천장에 걸린 배너.
 
-경기장 천장에 걸린 우승 배너다. 차저스 파우더블루(한 톤 올린 값)에 흰 SL, 그 아래
-번개, 봉은 골드. **번개는 직접 그렸다** — 팀 실물 로고를 앱 아이콘에 쓰면 앱이 차저스
-것처럼 보이고, 무엇보다 로고 본체가 파우더블루라 파란 배너 위에서 죽는다(확인함).
+경기장 천장에 걸린 우승 배너다. 램스 로열 블루에 흰 SL, 그 아래 말린 뿔 하나, 봉은
+솔 옐로. **뿔은 직접 그렸다** — 팀 실물 로고를 쓰면 앱이 램스 것처럼 보인다. 아는
+사람 눈에만 램스인 정도가 맞다.
+
+(2026-10 전에는 차저스 파우더블루에 번개였다. 차저스를 램스로 바꾸면서 같이 바꿨다.)
 
 만드는 법은 SVG 한 장 → qlmanage 로 1024 래스터 → sips 로 축소. 빌드에 안 끼워 뒀다 —
 아이콘은 1년에 한 번 바뀔까 말까 한데, 매 배포마다 렌더하면 그만큼 느려지고 깨질 자리만 는다.
@@ -22,19 +24,20 @@ ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
 INK = "#101215"
 CHALK = "#FFFFFF"
 DIM = "#8B939E"
-BLUE = "#12A3E0"   # 차저스 파우더블루를 한 톤 올린 값
-GOLD = "#FFC20E"
+BLUE = "#003594"   # 램스 로열 블루
+GOLD = "#FFD100"   # 램스 솔 옐로
 FONT = "Helvetica Neue, Helvetica, Arial"
 
 BANNER = "M146 120 H 366 V 378 L 256 316 L 146 378 Z"
-# 0..158 x 0..62 안에서 그린 번개. 여섯 개 그려 보고 고른 모양이다.
-BOLT = "M0 30 L 78 30 L 56 4 L 158 24 L 100 30 L 118 58 Z"
+# 헬멧 이마에서 뒤로 넘어가 아래로 말리는 뿔. 512 판 위에서 그렸고 가운데가 대략 (280, 240).
+# 크게 그리면 배너 아래 홈에 닿아서 0.36 배로 줄여 SL 과 홈 사이에 앉혔다(셋 그려 보고 고름).
+HORN = "M120 330 C 150 170, 330 120, 392 210 C 440 280, 380 360, 318 330 C 270 306, 290 246, 336 256"
 
 
-def bolt(cx: float, cy: float, w: float) -> str:
-    s = w / 158
-    return (f'<g transform="translate({cx - w / 2:.1f} {cy - 62 * s / 2:.1f}) scale({s:.4f})">'
-            f'<path d="{BOLT}" fill="{GOLD}"/></g>')
+def horn(cx: float, cy: float, scale: float, stroke: float) -> str:
+    return (f'<g transform="translate({cx} {cy}) scale({scale}) translate(-280 -240)">'
+            f'<path d="{HORN}" fill="none" stroke="{GOLD}" stroke-width="{stroke / scale:.1f}" '
+            f'stroke-linecap="round" stroke-linejoin="round"/></g>')
 
 
 def svg(rounded: bool) -> str:
@@ -46,9 +49,9 @@ def svg(rounded: bool) -> str:
   <circle cx="104" cy="111" r="12" fill="{GOLD}"/>
   <circle cx="408" cy="111" r="12" fill="{GOLD}"/>
   <path d="{BANNER}" fill="{BLUE}"/>
-  <text x="256" y="236" font-family="{FONT}" font-size="100" font-weight="700" font-style="italic"
+  <text x="256" y="226" font-family="{FONT}" font-size="100" font-weight="700" font-style="italic"
         text-anchor="middle" letter-spacing="-6" fill="{CHALK}">SL</text>
-  {bolt(256, 282, 182)}
+  {horn(256, 276, 0.36, 13)}
 </svg>'''
 
 
@@ -83,6 +86,16 @@ def main() -> None:
     resize(rounded, 192, os.path.join(ROOT, "public/icons/icon-192.png"))
     # iOS 홈 화면 — 모서리는 iOS 가 깎는다
     resize(square, 180, os.path.join(ROOT, "src/app/apple-icon.png"))
+    # 아이폰 앱 — 역시 모서리 안 깎은 판. **알파 채널이 있으면 App Store 가 업로드를 거절한다**
+    # (qlmanage 는 불투명한 그림에도 알파를 붙여 내보낸다) — JPEG 를 한 번 거쳐 떼어 낸다.
+    ios = os.path.join(ROOT, "ios/SLSports/Assets.xcassets/AppIcon.appiconset/icon-1024.png")
+    flat = os.path.join(HERE, "_flat.jpg")
+    subprocess.run(["sips", "-s", "format", "jpeg", "-s", "formatOptions", "best", square, "--out", flat],
+                   check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    subprocess.run(["sips", "-s", "format", "png", flat, "--out", ios],
+                   check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    os.remove(flat)
+    print(f"  {os.path.relpath(ios, ROOT)}  1024x1024 (알파 없음)")
 
 
 if __name__ == "__main__":
