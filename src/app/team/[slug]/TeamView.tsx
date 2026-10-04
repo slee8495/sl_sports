@@ -34,7 +34,9 @@ export function TeamView({ team, programs, news, live: liveNow, highlights }: Pr
 
   const split = splitSchedule(program?.games ?? []);
   // 스코어보드 쪽이 더 빨리 갱신된다. 일정에 아직 안 반영된 진행 중 경기는 그쪽 것을 쓴다.
-  const live = liveNow ?? split.live;
+  // 스코어보드는 **끝난 경기도** 준다 — 그걸 그대로 쓰면 끝난 지 몇 시간 된 경기가
+  // "Playing now" 로 뜬다(램스 이글스전에서 봤다). 진행 중일 때만 받는다.
+  const live = (liveNow?.status === "in" ? liveNow : null) ?? split.live;
   const roster = program?.roster ?? null;
   const standings = program?.standings ?? null;
   const injuries = program?.injuries ?? null;
