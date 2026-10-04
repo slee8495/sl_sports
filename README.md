@@ -16,7 +16,9 @@
 | UC San Diego Tritons | Big West 농구 | ESPN |
 | Orange Lutheran Lancers | Trinity League 풋볼·야구 | 학교 공식 캘린더 + MaxPreps |
 
-**배포:** Vercel · 태평양 시간으로 그린다(팀도 나도 남부 캘리포니아에 있다).
+**배포:** Vercel — `master` 에 push 하면 production 으로 나간다(2026-10-04 까지는 production
+브랜치가 없는 `main` 으로 잡혀 있어서 push 가 Preview 로만 갔다). 태평양 시간으로 그린다(팀도
+나도 남부 캘리포니아에 있다).
 
 ---
 
