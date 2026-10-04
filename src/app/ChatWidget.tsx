@@ -121,7 +121,7 @@ export function ChatWidget() {
           <div className="flex-1 overflow-y-auto px-4 py-3">
             {messages.length === 0 && (
               <p className="text-sm text-faint">
-                Try &quot;when do the Chargers play next?&quot; or &quot;who\u2019s hurt on the Ducks?&quot;
+                Try &quot;when do the Rams play next?&quot; or &quot;who\u2019s hurt on the Ducks?&quot;
               </p>
             )}
             <div className="flex flex-col gap-3">

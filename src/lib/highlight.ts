@@ -8,7 +8,7 @@
 import type { Game } from "./sources/types";
 import { slashDate } from "./format";
 
-/** 유튜브 제목이 대개 "Twins vs. Angels Game Highlights (9/17/26)" 라서 그 모양에 맞춘다. */
+/** 유튜브 제목이 대개 "Giants vs. Dodgers Game Highlights (9/17/26)" 라서 그 모양에 맞춘다. */
 export function highlightQuery(us: string, game: Game): string {
   const them = game.opponent.shortName ?? game.opponent.name;
   const when = slashDate(game.startsAt);
@@ -40,7 +40,7 @@ export function titleFits(title: string, us: string[], them: string[]): boolean 
 /**
  * 이름에서 찾을 만한 조각들.
  *
- * 영상 제목이 팀을 부르는 방식이 제각각이다 — "Los Angeles Angels" 는 "Angels" 로,
+ * 영상 제목이 팀을 부르는 방식이 제각각이다 — "Los Angeles Dodgers" 는 "Dodgers" 로,
  * "Orange Lutheran Lancers" 는 **"Orange Lutheran"** 으로 뜬다(마스코트를 안 쓴다).
  * 한 가지만 들고 찾으면 맞는 영상을 놓친다 — 실제로 랜서스 하이라이트를 그렇게 놓쳤다.
  */

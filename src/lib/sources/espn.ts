@@ -324,6 +324,13 @@ export async function espnLive(src: EspnSource): Promise<Fetched<Game | null>> {
     const mine = comp?.competitors?.some((c) => c.team?.id === src.teamId);
     if (!mine) continue;
     const game = toGame(e, src.teamId);
+    /*
+      **늙은 스코어보드를 거른다.** 데이터 캐시는 오래 잠들었다 깨면 낡은 값을 한 번 먼저
+      내준다 — 9월 19일 7회 초 스코어보드가 10월에 "지금 하는 중" 으로 떴다(직접 봤다).
+      야구 연장전도 12시간은 안 간다.
+    */
+    const started = game?.startsAt ? Date.parse(game.startsAt) : NaN;
+    if (Number.isFinite(started) && Date.now() - started > 12 * 3_600_000) continue;
     if (game && (game.status === "in" || game.status === "final")) return game;
   }
   return null;

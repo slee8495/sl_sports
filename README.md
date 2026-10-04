@@ -8,8 +8,8 @@
 
 | 팀 | 리그 | 출처 |
 | --- | --- | --- |
-| Los Angeles Chargers | NFL | ESPN |
-| Los Angeles Angels | MLB | ESPN |
+| Los Angeles Rams | NFL | ESPN |
+| Los Angeles Dodgers | MLB | ESPN |
 | LA Clippers | NBA | ESPN |
 | Anaheim Ducks | NHL | ESPN |
 | San Diego State Aztecs | Pac-12 풋볼 | ESPN |

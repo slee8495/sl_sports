@@ -58,7 +58,7 @@ export const getTeamDetails = tool({
   description:
     "Live detail for one team: record, next game, next home game, last result, coaches, injuries, standing and recent headlines. For a school that plays more than one sport, pass `sport` to choose; otherwise the one in season answers.",
   inputSchema: z.object({
-    slug: z.string().describe("Team slug from listTeams, e.g. 'chargers'"),
+    slug: z.string().describe("Team slug from listTeams, e.g. 'rams'"),
     sport: z.string().optional().describe("For multi-sport schools: 'football' or 'baseball'"),
   }),
   execute: async ({ slug, sport }) => {

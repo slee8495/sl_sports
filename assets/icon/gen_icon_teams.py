@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """로고 후보 — 사용자의 네 팀 실제 엠블럼(9/17).
 
-차저스(NFL)·에인절스(MLB)·덕스(NHL)·클리퍼스(NBA). 시판하지 않는 개인 앱이라
+램스(NFL)·다저스(MLB)·덕스(NHL)·클리퍼스(NBA). 시판하지 않는 개인 앱이라
 팀 마크를 그대로 쓴다(사용자 확인).
 
 ESPN의 어두운 배경용(500-dark)을 받는다 — 기본 판은 밝은 배경 전제라 남색 위에
@@ -17,8 +17,8 @@ BG = (15, 23, 42)          # 남색(master)
 BG_I = (30, 27, 75)        # 인디고(LP 개인용)
 
 SRC = {
-  'chargers': 'https://a.espncdn.com/i/teamlogos/nfl/500-dark/lac.png',
-  'angels':   'https://a.espncdn.com/i/teamlogos/mlb/500-dark/laa.png',
+  'rams':     'https://a.espncdn.com/i/teamlogos/nfl/500-dark/lar.png',
+  'dodgers':  'https://a.espncdn.com/i/teamlogos/mlb/500-dark/lad.png',
   'ducks':    'https://a.espncdn.com/i/teamlogos/nhl/500-dark/ana.png',
   'clippers': 'https://a.espncdn.com/i/teamlogos/nba/500-dark/lac.png',
 }
@@ -53,22 +53,22 @@ def build(layout, bg=BG):
 
 CANDS = [
   ('M. 2×2 격자', [
-      ('clippers', 330, 330, 380), ('angels', 870, 330, 380),
-      ('chargers', 330, 870, 340), ('ducks', 870, 870, 380)]),
+      ('clippers', 330, 330, 380), ('dodgers', 870, 330, 380),
+      ('rams', 330, 870, 340), ('ducks', 870, 870, 380)]),
   ('N. 2×2 크게·겹침', [
-      ('clippers', 360, 350, 470), ('angels', 850, 340, 470),
-      ('chargers', 350, 860, 420), ('ducks', 860, 870, 470)]),
-  ('O. 에인절스 크게 + 셋', [
-      ('angels', 600, 520, 560),
-      ('clippers', 230, 960, 290), ('chargers', 600, 1000, 250), ('ducks', 970, 960, 290)]),
+      ('clippers', 360, 350, 470), ('dodgers', 850, 340, 470),
+      ('rams', 350, 860, 420), ('ducks', 860, 870, 470)]),
+  ('O. 다저스 크게 + 셋', [
+      ('dodgers', 600, 520, 560),
+      ('clippers', 230, 960, 290), ('rams', 600, 1000, 250), ('ducks', 970, 960, 290)]),
   ('P. 셋 (덕스 뺌)', [
-      ('clippers', 330, 380, 440), ('angels', 870, 380, 440),
-      ('chargers', 600, 880, 400)]),
+      ('clippers', 330, 380, 440), ('dodgers', 870, 380, 440),
+      ('rams', 600, 880, 400)]),
   ('Q. 가로 한 줄', [
-      ('clippers', 200, 600, 330), ('angels', 470, 600, 330),
-      ('chargers', 740, 600, 300), ('ducks', 1010, 600, 330)]),
-  ('R. 둘 (에인절스·차저스)', [
-      ('angels', 420, 440, 560), ('chargers', 760, 790, 500)]),
+      ('clippers', 200, 600, 330), ('dodgers', 470, 600, 330),
+      ('rams', 740, 600, 300), ('ducks', 1010, 600, 330)]),
+  ('R. 둘 (다저스·램스)', [
+      ('dodgers', 420, 440, 560), ('rams', 760, 790, 500)]),
 ]
 
 sheet = Image.new('RGB', (3 * 360 + 40, 2 * 430 + 30), (12, 16, 28))

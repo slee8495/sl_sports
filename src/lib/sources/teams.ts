@@ -61,7 +61,7 @@ export type Team = {
   name: string;
   /** 좁은 자리에서 쓰는 짧은 이름. */
   shortName: string;
-  /** 마스코트만 — "Chargers", "Lancers". */
+  /** 마스코트만 — "Rams", "Lancers". */
   nickname: string;
   league: string;
   level: Level;
@@ -93,36 +93,36 @@ export type Team = {
 
 export const TEAMS: Team[] = [
   {
-    slug: "chargers",
-    name: "Los Angeles Chargers",
-    shortName: "Chargers",
-    nickname: "Bolts",
+    slug: "rams",
+    name: "Los Angeles Rams",
+    shortName: "Rams",
+    nickname: "Rams",
     league: "NFL",
     level: "pro",
     sport: "Football",
     shelf: "Pro",
-    colors: { primary: "#0080C6", secondary: "#FFC20E", onPrimary: "#FFFFFF" },
-    logo: "https://a.espncdn.com/i/teamlogos/nfl/500/lac.png",
+    colors: { primary: "#003594", secondary: "#FFD100", onPrimary: "#FFFFFF" },
+    logo: "https://a.espncdn.com/i/teamlogos/nfl/500/lar.png",
     homeVenue: "SoFi Stadium",
-    ticketsUrl: "https://www.chargers.com/tickets/",
-    source: { kind: "espn", path: "football/nfl", teamId: "24", standingsLevel: 3 },
-    tagline: "Bolt Up",
+    ticketsUrl: "https://www.therams.com/tickets/",
+    source: { kind: "espn", path: "football/nfl", teamId: "14", standingsLevel: 3 },
+    tagline: "Whose House? Rams House",
   },
   {
-    slug: "angels",
-    name: "Los Angeles Angels",
-    shortName: "Angels",
-    nickname: "Halos",
+    slug: "dodgers",
+    name: "Los Angeles Dodgers",
+    shortName: "Dodgers",
+    nickname: "Blue Crew",
     league: "MLB",
     level: "pro",
     sport: "Baseball",
     shelf: "Pro",
-    colors: { primary: "#BA0021", secondary: "#003263", onPrimary: "#FFFFFF" },
-    logo: "https://a.espncdn.com/i/teamlogos/mlb/500/laa.png",
-    homeVenue: "Angel Stadium",
-    ticketsUrl: "https://www.mlb.com/angels/tickets",
-    source: { kind: "espn", path: "baseball/mlb", teamId: "3", standingsLevel: 3 },
-    tagline: "Light That Halo",
+    colors: { primary: "#005A9C", secondary: "#EF3E42", onPrimary: "#FFFFFF" },
+    logo: "https://a.espncdn.com/i/teamlogos/mlb/500/lad.png",
+    homeVenue: "Dodger Stadium",
+    ticketsUrl: "https://www.mlb.com/dodgers/tickets",
+    source: { kind: "espn", path: "baseball/mlb", teamId: "19", standingsLevel: 3 },
+    tagline: "Bleed Dodger Blue",
   },
   {
     slug: "clippers",
