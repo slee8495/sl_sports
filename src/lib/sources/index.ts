@@ -78,8 +78,9 @@ async function espnProgram(team: Team): Promise<Fetched<Program[]>> {
   const src = team.source;
 
   // 전부 동시에 부른다. 줄 세워 부르면 한 화면에 대여섯 번의 왕복이 쌓인다.
-  const [schedule, snapshot, standings, roster, injuries, postseason] = await Promise.all([
+  const [schedule, live, snapshot, standings, roster, injuries, postseason] = await Promise.all([
     espnSchedule(src),
+    espnLive(src),
     espnSnapshot(src),
     espnStandings(src),
     espnRoster(src),
@@ -88,12 +89,20 @@ async function espnProgram(team: Team): Promise<Fetched<Program[]>> {
   ]);
   if (schedule === null) return null;
 
+  /*
+    **하는 중인 경기는 스코어보드 것으로 갈아 끼운다.** 일정은 15분 캐시라 그 안의 점수는
+    15분까지 늦는다 — 덕스가 5-2 로 지고 있는데 서가에는 점수가 없고, 다른 데는 4-2 로
+    떴다(소유자 지적). 스코어보드는 1분 캐시다. 갈아 끼우면 서가·팀 화면·일정 표가 다 같은
+    점수를 그린다.
+  */
+  const games = live ? schedule.games.map((g) => (g.id === live.id ? live : g)) : schedule.games;
+
   return [
     {
       key: "main",
       label: team.sport,
       ball: BALLS[team.sport.toLowerCase()] ?? "football",
-      games: schedule.games,
+      games,
       pastSeason: schedule.isPastSeason ? schedule.seasonYear : null,
       snapshot: snapshot ?? fallbackSnapshot(team),
       standings,
