@@ -139,6 +139,8 @@ export type TeamSnapshot = {
  * 골수팬은 그것도 본다 — 누가 우리를 떨어뜨렸는지, 그 팀이 어디까지 가는지.
  */
 export type BracketTeam = {
+  /** 출처 안의 팀 id. 학교 브래킷에는 없다. */
+  id: string | null;
   name: string;
   shortName: string | null;
   logo: string | null;
@@ -166,10 +168,28 @@ export type Matchup = {
   startsAt: string | null;
   /** 한 줄 — "LAD win series 3-1", "Game 3 · Top 7th". */
   detail: string | null;
+  /**
+   * **지금 하는 경기의 점수**, `teams` 와 같은 순서. 하는 중이 아니면 null.
+   *
+   * 시리즈에서는 `score` 가 이긴 경기 수라서, 지금 7회에 3-2 로 앞서고 있다는 건 거기 없다.
+   * 그게 이 칸이다. 단판이면 `score` 와 같은 값이다.
+   */
+  live: [number | null, number | null] | null;
+  /**
+   * 브래킷 나무에서의 자리(그 라운드 안, 위에서부터). 모르면 null — 그때는 화면이 시드와
+   * 다음 라운드와의 연결로 자리를 찾는다(`layoutBracket`).
+   */
+  slot: number | null;
 };
 
 export type BracketRound = {
   /** "Division Series", "Quarterfinal", "Elite 8". */
   name: string;
+  /**
+   * 브래킷 앞에 따로 치르는 판 — NBA 플레이인, NCAA First Four. 나무에 안 들어가고
+   * 브래킷 위에 따로 그린다.
+   */
+  pre: boolean;
+  /** 아직 안 열린 라운드는 빈 배열이다. 화면은 빈 칸(TBD)으로 자리를 그린다. */
   matchups: Matchup[];
 };

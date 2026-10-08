@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 
-// Trusted hosts for the site's own browser-side callers (ChatWidget), which have no way to
+// Trusted hosts for the site's own browser-side callers, which have no way to
 // carry a real secret without shipping it to every visitor. Not spoof-proof (Origin/Referer
 // can be forged by a direct curl), but it filters out the realistic threat: bots that scan
 // Vercel apps for open API routes without ever loading the page. The SLKeyboard iOS app has

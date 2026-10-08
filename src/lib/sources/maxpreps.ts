@@ -319,6 +319,7 @@ function parseBracket(html: string, ourName: string, ended: boolean): BracketRou
           const result = textOf(t.match(/<a class="result"[^>]*>([^<]*)/)?.[1] ?? "");
           const logo = t.match(/<span class="mascotimage"[^>]*><img src="([^"]+)"/)?.[1]?.replace(/&amp;/g, "&") ?? null;
           return {
+            id: null,
             name,
             shortName: null,
             logo,
@@ -347,6 +348,10 @@ function parseBracket(html: string, ourName: string, ended: boolean): BracketRou
           status: done ? "final" : "scheduled",
           startsAt: fromPacific(li.match(/<abbr title="([^"]+)"/)?.[1] ?? null),
           detail: null,
+          // 학교 브래킷에는 진행 중 점수가 없다. 끝난 점수만 올라온다.
+          live: null,
+          // 페이지의 순서가 곧 나무의 자리다(반쪽 둘이면 왼쪽 반이 먼저 온다).
+          slot: slot.matchups.length,
         });
       }
       rounds.set(key, slot);
@@ -363,7 +368,7 @@ function parseBracket(html: string, ourName: string, ended: boolean): BracketRou
     .sort(([x], [y]) => x - y)
     .map(([, r]) => ({ name: r.name, matchups: ended ? r.matchups.filter((m) => m.teams.some(Boolean)) : r.matchups }))
     .filter((r) => r.matchups.length > 0)
-    .map((r, i) => ({ name: r.name ?? `Round ${i + 1}`, matchups: r.matchups }));
+    .map((r, i) => ({ name: r.name ?? `Round ${i + 1}`, pre: false, matchups: r.matchups }));
   return out.length > 0 ? out : null;
 }
 

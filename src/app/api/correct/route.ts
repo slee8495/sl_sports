@@ -6,7 +6,7 @@ import { isAuthorizedRequest } from "@/lib/apiAuth";
 export const maxDuration = 30;
 
 // Typo/spacing cleanup pass for the SLKeyboard iOS app's voice-dictated (or typed) text.
-// Uses the cheap MODEL (not CHAT_MODEL) since this is a small, low-stakes text-in/text-out
+// Uses a cheap model since this is a small, low-stakes text-in/text-out
 // task that needs to be fast, not clever.
 export async function POST(req: NextRequest) {
   if (!isAuthorizedRequest(req)) {

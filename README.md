@@ -76,13 +76,14 @@ npm install
 npm run dev
 ```
 
-환경 변수는 챗 어시스턴트와 SLKeyboard 엔드포인트에만 필요하다. 팀 데이터는 키가 없다.
+환경 변수는 SLKeyboard 엔드포인트에만 필요하다. 팀 데이터는 키가 없다.
 
 | 변수 | 쓰는 곳 |
 | --- | --- |
 | `KEYBOARD_API_KEY` | `/api/transcribe`, `/api/correct` (SLKeyboard 앱이 부른다) |
 
-AI Gateway 는 Vercel OIDC 로 붙는다(`/api/chat`, `/api/speak`). **팀 데이터는 모델을 안 쓴다.**
+AI Gateway 는 Vercel OIDC 로 붙는다(`/api/transcribe`, `/api/correct`). **팀 데이터는 모델을 안 쓴다.**
+챗 어시스턴트(`/api/chat`, `/api/speak`)는 2026-10 에 걷어냈다.
 
 ## 아이폰 앱
 

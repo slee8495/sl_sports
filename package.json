@@ -9,8 +9,6 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "^4.0.8",
-    "@ai-sdk/react": "^4.0.16",
     "@vercel/config": "^0.5.5",
     "ai": "^7.0.15",
     "next": "16.2.10",

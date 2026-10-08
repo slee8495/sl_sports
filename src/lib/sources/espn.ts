@@ -618,19 +618,67 @@ export async function espnInjuries(src: EspnSource): Promise<Fetched<Injury[]>> 
  *
  * `keep` 은 그 리그의 포스트시즌 중 **브래킷인 것만** 남긴다 — 대학 풋볼의 볼 게임 마흔 개
  * 중 플레이오프는 열한 개고, 대학 농구는 NIT·CBI 가 같은 날 같이 열린다.
+ *
+ * `rounds` 는 **나무의 모양**이다 — 아직 안 열린 라운드도 빈 상자로 자리를 그려야 해서, 라운드
+ * 이름을 미리 안다(`roundOf` 가 내는 이름 그대로, 마지막이 결승). `pre` 는 나무 밖의 판.
+ *
+ * `seeds` 는 첫 라운드 자리를 잡는 법:
+ * - **standings**: 순위표의 플레이오프 시드(`playoffSeed`) — 경기 데이터에는 시드가 없다.
+ * - **division**: NHL 은 시드 1-8 로 짝을 안 짓는다. 디비전 안에서 짝을 짓는다(1위 대 와일드카드,
+ *   2위 대 3위). 그래서 시드는 안 그리고 디비전으로 자리만 잡는다.
+ * - 없으면 경기에 붙어 오는 시드(대학 — CFP·NCAA 는 `curatedRank` 가 시드다).
+ *
  * 팀이 아니라 리그에 딸린 것이라 `teams.ts` 가 아니라 여기 둔다. 같은 리그 팀을 더할 때는
- * 손댈 게 없고, 표에 없는 리그는 날짜별로 다 읽는다.
+ * 손댈 게 없고, 표에 없는 리그는 날짜별로 다 읽어 목록으로 그린다.
  */
-const POSTSEASON: Record<string, { by: "day" | "week"; query?: string; keep?: RegExp; playIn?: boolean }> = {
-  "football/nfl": { by: "week" },
-  "football/college-football": { by: "week", query: "groups=80&limit=200", keep: /College Football Playoff/i },
-  "baseball/mlb": { by: "day" },
-  "basketball/nba": { by: "day", playIn: true },
-  "hockey/nhl": { by: "day" },
+type PostseasonHow = {
+  by: "day" | "week";
+  query?: string;
+  keep?: RegExp;
+  playIn?: boolean;
+  rounds?: string[];
+  pre?: string[];
+  seeds?: "standings" | "division";
+  /** 라운드마다 시드를 다시 매긴다(NFL — 1번 시드가 남은 팀 중 가장 낮은 시드와 붙는다). */
+  reseed?: boolean;
+};
+
+const POSTSEASON: Record<string, PostseasonHow> = {
+  "football/nfl": {
+    by: "week",
+    rounds: ["Wild Card", "Divisional", "Conference Championship", "Super Bowl"],
+    seeds: "standings",
+    reseed: true,
+  },
+  "football/college-football": {
+    by: "week",
+    query: "groups=80&limit=200",
+    keep: /College Football Playoff/i,
+    rounds: ["First Round", "Quarterfinal", "Semifinal", "National Championship"],
+  },
+  "baseball/mlb": {
+    by: "day",
+    rounds: ["Wild Card Series", "Division Series", "Championship Series", "World Series"],
+    seeds: "standings",
+  },
+  "basketball/nba": {
+    by: "day",
+    playIn: true,
+    pre: ["Play-In"],
+    rounds: ["1st Round", "Conference Semifinals", "Conference Finals", "NBA Finals"],
+    seeds: "standings",
+  },
+  "hockey/nhl": {
+    by: "day",
+    rounds: ["1st Round", "2nd Round", "Conference Final", "Stanley Cup Final"],
+    seeds: "division",
+  },
   "basketball/mens-college-basketball": {
     by: "day",
     query: "groups=100&limit=100",
     keep: /NCAA Men's Basketball Championship/i,
+    pre: ["First Four"],
+    rounds: ["1st Round", "2nd Round", "Sweet 16", "Elite 8", "Final Four", "National Championship"],
   },
 };
 
@@ -684,15 +732,21 @@ function roundOf(headline: string): Round {
   return { round: h, group: null, label: null };
 }
 
-function bracketTeam(c: EspnCompetitor | undefined, ourTeamId: string): BracketTeam | null {
+/** 순위표에서 읽은 팀별 시드와 디비전. 팀 id 로 찾는다. */
+type Seeds = Map<string, { seed: number | null; division: string | null }>;
+
+function bracketTeam(c: EspnCompetitor | undefined, ourTeamId: string, seeds: Seeds | null, showSeeds: boolean): BracketTeam | null {
   const t = c?.team;
   if (!t?.displayName) return null;
   const rank = c?.curatedRank?.current;
+  const fromGame = typeof rank === "number" && rank > 0 && rank < 99 ? rank : null;
+  const fromTable = t.id ? (seeds?.get(t.id)?.seed ?? null) : null;
   return {
+    id: t.id ?? null,
     name: t.displayName,
     shortName: t.shortDisplayName ?? t.abbreviation ?? null,
     logo: logoOf(t),
-    seed: typeof rank === "number" && rank > 0 && rank < 99 ? rank : null,
+    seed: showSeeds ? (fromTable ?? fromGame) : null,
     isUs: t.id === ourTeamId,
     score: null,
     won: false,
@@ -708,7 +762,7 @@ type PostGame = { e: EspnEvent; comp: EspnCompetition; round: Round; status: Gam
  * 시리즈면 **최근에 열린 경기**의 시리즈 상태가 지금 상태다(이긴 수·"LAD win series 3-1").
  * 두 팀의 위아래는 1차전 홈팀이 위 — 상위 시드가 1차전 홈이다. 시드가 있는 대학은 시드 순.
  */
-function toMatchup(games: PostGame[], ourTeamId: string): Matchup | null {
+function toMatchup(games: PostGame[], ourTeamId: string, seeds: Seeds | null, showSeeds: boolean): Matchup | null {
   const sorted = [...games].sort((a, b) => a.at.localeCompare(b.at));
   const opener = sorted[0];
   const played = sorted.filter((g) => g.status === "in" || g.status === "final");
@@ -719,7 +773,7 @@ function toMatchup(games: PostGame[], ourTeamId: string): Matchup | null {
   const cs = opener.comp.competitors ?? [];
   const home = cs.find((c) => c.homeAway === "home") ?? cs[0];
   const away = cs.find((c) => c !== home);
-  let pair = [bracketTeam(home, ourTeamId), bracketTeam(away, ourTeamId)];
+  let pair = [bracketTeam(home, ourTeamId, seeds, showSeeds), bracketTeam(away, ourTeamId, seeds, showSeeds)];
   if (pair[0]?.seed != null && pair[1]?.seed != null && pair[1].seed < pair[0].seed) pair = [pair[1], pair[0]];
   const [top, bottom] = pair;
   if (!top || !bottom) return null;
@@ -761,6 +815,10 @@ function toMatchup(games: PostGame[], ourTeamId: string): Matchup | null {
     detail = series?.totalCompetitions ? `Best of ${series.totalCompetitions}` : null;
   }
 
+  // 지금 하는 경기의 점수. 시리즈의 `score` 는 이긴 수라서 이건 따로 든다.
+  const liveScore = (name: string) => scoreOf(live?.comp.competitors?.find((x) => x.team?.displayName === name));
+  const liveLine: Matchup["live"] = live ? [liveScore(top.name), liveScore(bottom.name)] : null;
+
   return {
     id: isSeries ? `${opener.round.round}-${[top.name, bottom.name].sort().join("-")}` : (opener.e.id ?? opener.at),
     group: opener.round.group,
@@ -770,6 +828,8 @@ function toMatchup(games: PostGame[], ourTeamId: string): Matchup | null {
     status,
     startsAt: (live ?? (status === "final" ? latest : upcoming ?? latest)).at,
     detail,
+    live: liveLine,
+    slot: null,
   };
 }
 
@@ -823,9 +883,13 @@ async function fetchPostseason(path: string, ourTeamId: string): Promise<Fetched
     }
   }
 
-  const pages = await Promise.all(urls.map((u) => read<{ events?: EspnEvent[] }>(u.url, u.ttl)));
+  const [pages, seeds] = await Promise.all([
+    Promise.all(urls.map((u) => read<{ events?: EspnEvent[] }>(u.url, u.ttl))),
+    how.seeds ? readSeeds(path, year) : Promise.resolve(null),
+  ]);
   // 한 장이라도 못 읽으면 브래킷에 구멍이 난다. 구멍 난 브래킷은 틀린 브래킷이다.
   if (pages.some((p) => p === null)) return null;
+  const showSeeds = how.seeds !== "division";
 
   const seen = new Set<string>();
   const games: PostGame[] = [];
@@ -855,13 +919,123 @@ async function fetchPostseason(path: string, ourTeamId: string): Promise<Fetched
 
   const rounds = new Map<string, Matchup[]>();
   for (const list of buckets.values()) {
-    const m = toMatchup(list, ourTeamId);
+    const m = toMatchup(list, ourTeamId, seeds, showSeeds);
     if (!m) continue;
     const name = list[0].round.round;
     rounds.set(name, [...(rounds.get(name) ?? []), m]);
   }
 
-  return orderBracket([...rounds.entries()].map(([name, matchups]) => ({ name, matchups })));
+  // 모양을 모르는 리그는 있는 라운드만 목록으로.
+  if (!how.rounds) return orderBracket([...rounds.entries()].map(([name, matchups]) => ({ name, pre: false, matchups })));
+
+  /*
+    **모양대로 세운다.** 아직 안 열린 라운드도 이름과 빈 매치업 목록으로 자리를 둔다 — 화면이
+    거기 빈 상자를 그린다. 이름은 데이터에 있는 것을 쓴다("Super Bowl" 자리에 "Super Bowl LX").
+  */
+  const used = new Set<string>();
+  const pick = (want: string) => {
+    const name = [...rounds.keys()].find((n) => !used.has(n) && (n === want || n.startsWith(want)));
+    if (name) used.add(name);
+    return name;
+  };
+  const pre = (how.pre ?? []).flatMap((want) => {
+    const name = pick(want);
+    return name ? [{ name, pre: true, matchups: rounds.get(name) ?? [] }] : [];
+  });
+  const main = how.rounds.map((want) => {
+    const name = pick(want);
+    return { name: name ?? want, pre: false, matchups: name ? (rounds.get(name) ?? []) : [] };
+  });
+  // 모양에 없는 라운드는 버리지 않고 나무 밖에 둔다. 버리면 경기가 사라진다.
+  const leftover = [...rounds.entries()].filter(([n]) => !used.has(n)).map(([name, matchups]) => ({ name, pre: true, matchups }));
+
+  if (how.seeds === "division" && seeds) placeByDivision(main[0].matchups, seeds);
+  if (how.reseed && main[1]?.matchups.length) placeUnderNext(main[0].matchups, main[1].matchups);
+
+  return [...orderBracket([...pre, ...leftover]), ...orderBracket(main)];
+}
+
+/**
+ * 순위표의 플레이오프 시드와 디비전.
+ *
+ * 경기 데이터에는 시드가 없다(MLB·NBA·NFL 은 `curatedRank` 가 비어 있고, NHL 은 99 다).
+ * 순위표의 `playoffSeed` 가 그 자리다 — 2026 NBA 동부가 DET 1 · BOS 2 · … · ORL 8 로, 리그
+ * 브래킷 그림과 같다. 디비전 깊이(level=3)로 읽어 디비전 이름도 같이 든다.
+ */
+async function readSeeds(path: string, year: number): Promise<Seeds | null> {
+  type Node = {
+    name?: string;
+    children?: Node[];
+    standings?: { entries?: { team?: { id?: string }; stats?: { name?: string; value?: number }[] }[] };
+  };
+  const json = await read<Node>(`${SITE_V2}/${path}/standings?level=3&season=${year}`, TTL.standings);
+  if (!json) return null;
+  const out: Seeds = new Map();
+  const walk = (n: Node) => {
+    for (const e of n.standings?.entries ?? []) {
+      const v = e.stats?.find((x) => x.name === "playoffSeed")?.value;
+      if (e.team?.id) out.set(e.team.id, { seed: typeof v === "number" && v > 0 ? Math.round(v) : null, division: n.name ?? null });
+    }
+    for (const c of n.children ?? []) walk(c);
+  };
+  walk(json);
+  return out;
+}
+
+/**
+ * 다시 매기는 리그(NFL)의 첫 라운드 자리 — **다음 라운드에서 실제로 누구와 만났는지로.**
+ *
+ * NFL 은 와일드카드가 끝나면 시드를 다시 매긴다. 1번 시드는 4·5번 승자가 아니라 남은 팀 중
+ * 가장 낮은 시드와 붙는다(2025: 시호크스 1번이 6번 49ers 와). 시드 배치로 자리를 잡으면
+ * 와일드카드 칸에서 그어진 선이 엉뚱한 디비저널 경기로 간다. 그래서 디비저널이 나오면 그
+ * 짝대로 자리를 다시 놓는다 — 시드 높은 경기가 위, 부전승 팀이 있으면 그 자리가 먼저.
+ * 디비저널 전에는 시드 배치 그대로다(아직 모르는 대진이다).
+ */
+function placeUnderNext(first: Matchup[], next: Matchup[]) {
+  const best = (m: Matchup) => Math.min(...m.teams.map((t) => t?.seed ?? 99));
+  const byGroup = new Map<string, Matchup[]>();
+  for (const m of next) byGroup.set(m.group ?? "", [...(byGroup.get(m.group ?? "") ?? []), m]);
+
+  for (const [group, parents] of byGroup) {
+    parents.sort((a, b) => best(a) - best(b));
+    const kids = first.filter((m) => (m.group ?? "") === group);
+    parents.forEach((p, k) => {
+      const names = p.teams.map((t) => t?.name);
+      const linked = kids.filter((m) => m.teams.some((t) => t && names.includes(t.name))).sort((a, b) => best(a) - best(b));
+      // 부전승 팀이 있는 경기는 한 칸만 내려온다 — 그 칸이 아래, 위는 부전승 자리.
+      const offset = linked.length === 1 ? 1 : 0;
+      linked.forEach((m, i) => (m.slot = k * 2 + offset + i));
+    });
+  }
+}
+
+/**
+ * NHL 첫 라운드의 자리.
+ *
+ * NHL 은 디비전 안에서 짝을 짓는다 — 1위 대 와일드카드, 2위 대 3위, 그 둘의 승자가 2라운드에서
+ * 만난다. 그래서 매치업의 디비전은 **시드가 높은 쪽 팀의 디비전**이고(와일드카드는 남의
+ * 디비전에서 올 수 있다), 디비전마다 1위가 있는 매치업이 위다. 2026 동부로 확인: CAR–OTT 와
+ * PIT–PHI 가 메트로폴리탄, 그 승자 CAR–PHI 가 실제 2라운드였다.
+ */
+function placeByDivision(matchups: Matchup[], seeds: Seeds) {
+  // 매치업에서 시드가 제일 높은 팀 — 그 팀의 디비전이 이 매치업의 디비전이다.
+  const top = (m: Matchup) =>
+    m.teams
+      .map((t) => (t?.id ? seeds.get(t.id) : undefined))
+      .filter((r): r is { seed: number; division: string } => r?.seed != null && !!r.division)
+      .sort((a, b) => a.seed - b.seed)[0] ?? null;
+
+  const byGroup = new Map<string, Matchup[]>();
+  for (const m of matchups) byGroup.set(m.group ?? "", [...(byGroup.get(m.group ?? "") ?? []), m]);
+
+  for (const list of byGroup.values()) {
+    if (list.some((m) => !top(m))) continue;
+    const divisions = [...new Set(list.map((m) => top(m)!.division))].sort();
+    const here = divisions.map((d) => list.filter((m) => top(m)!.division === d).sort((a, b) => top(a)!.seed - top(b)!.seed));
+    // 디비전마다 매치업이 둘이어야 짝이 맞다. 아니면 모양이 바뀐 것이라 자리를 안 박는다.
+    if (here.some((h) => h.length !== 2)) continue;
+    here.forEach((h, d) => h.forEach((m, i) => (m.slot = d * 2 + i)));
+  }
 }
 
 const cachedPostseason = unstable_cache(fetchPostseason, ["espn-postseason"], { revalidate: TTL.live });

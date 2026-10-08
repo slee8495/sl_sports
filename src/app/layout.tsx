@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from "next";
 import { Archivo } from "next/font/google";
-import { ChatWidget } from "./ChatWidget";
 import "./globals.css";
 
 /*
@@ -49,7 +48,6 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         >
           {children}
         </div>
-        <ChatWidget />
       </body>
     </html>
   );
