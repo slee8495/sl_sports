@@ -210,8 +210,13 @@ function toGame(e: EspnEvent, ourTeamId: string): Game | null {
 
   const status = statusOf(comp.status ?? e.status);
   const done = status === "final";
-  const ourScore = done ? scoreOf(us) : null;
-  const theirScore = done ? scoreOf(them) : null;
+  /*
+    **하는 중인 경기에도 점수를 싣는다.** 끝난 경기에만 실었더니 덕스가 3피리어드를 뛰는
+    중에 화면에는 "Live" 한 단어뿐이었다(소유자 지적). 승패(`result`)만 끝난 뒤에 정한다.
+  */
+  const scored = done || status === "in";
+  const ourScore = scored ? scoreOf(us) : null;
+  const theirScore = scored ? scoreOf(them) : null;
 
   let result: Game["result"] = null;
   if (done && ourScore != null && theirScore != null) {

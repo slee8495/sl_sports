@@ -27,7 +27,7 @@ export type Game = {
   isHome: boolean | null;
   neutralSite: boolean;
   status: GameStatus;
-  /** 우리 팀 점수 / 상대 점수. 안 끝났으면 null. */
+  /** 우리 팀 점수 / 상대 점수. 하는 중이면 지금 점수, 시작 전이면 null. 승패는 `result`. */
   ourScore: number | null;
   theirScore: number | null;
   result: "W" | "L" | "T" | null;
