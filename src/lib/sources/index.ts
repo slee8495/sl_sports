@@ -19,6 +19,7 @@ import {
   espnInjuries,
   espnLive,
   espnNews,
+  espnPostseason,
   espnRoster,
   espnSchedule,
   espnSnapshot,
@@ -26,11 +27,11 @@ import {
   type Injury,
   type Roster,
 } from "./espn";
-import { maxprepsRoster, maxprepsStandings, maxprepsTeam } from "./maxpreps";
+import { maxprepsBracket, maxprepsRoster, maxprepsStandings, maxprepsTeam } from "./maxpreps";
 import { sidearmNews, sidearmSchedule } from "./sidearm";
 import { recordOf, splitSchedule } from "./split";
 import { fallbackSnapshot, type SchoolSource, type Team } from "./teams";
-import type { Article, Fetched, Game, StandingsGroup, TeamSnapshot } from "./types";
+import type { Article, BracketRound, Fetched, Game, StandingsGroup, TeamSnapshot } from "./types";
 
 export type { Injury, Roster };
 export { splitSchedule, splitPrograms, recordOf, type ScheduleSplit } from "./split";
@@ -58,6 +59,10 @@ export type Program = {
   roster: Fetched<Roster>;
   injuries: Fetched<Injury[]>;
   /**
+   * 리그 포스트시즌 브래킷. **우리 팀이 없어도 채운다.** `[]` 는 아직 안 열렸다는 것.
+   */
+  postseason: Fetched<BracketRound[]>;
+  /**
    * 지금 하는 중인 종목인가.
    *
    * 화면을 열었을 때 어느 쪽을 먼저 보여 줄지를 이걸로 정한다 — 가을에 야구 순위표를
@@ -73,12 +78,13 @@ async function espnProgram(team: Team): Promise<Fetched<Program[]>> {
   const src = team.source;
 
   // 전부 동시에 부른다. 줄 세워 부르면 한 화면에 대여섯 번의 왕복이 쌓인다.
-  const [schedule, snapshot, standings, roster, injuries] = await Promise.all([
+  const [schedule, snapshot, standings, roster, injuries, postseason] = await Promise.all([
     espnSchedule(src),
     espnSnapshot(src),
     espnStandings(src),
     espnRoster(src),
     espnInjuries(src),
+    espnPostseason(src),
   ]);
   if (schedule === null) return null;
 
@@ -93,6 +99,7 @@ async function espnProgram(team: Team): Promise<Fetched<Program[]>> {
       standings,
       roster,
       injuries,
+      postseason,
       inSeason: true,
     },
   ];
@@ -103,10 +110,11 @@ async function espnProgram(team: Team): Promise<Fetched<Program[]>> {
 async function schoolPrograms(team: Team, src: SchoolSource): Promise<Fetched<Program[]>> {
   const built = await Promise.all(
     src.programs.map(async (p) => {
-      const [games, standing, roster] = await Promise.all([
+      const [games, standing, roster, postseason] = await Promise.all([
         sidearmSchedule(src, p.sportId),
         maxprepsTeam(src.maxpreps, p.maxprepsSport),
         maxprepsRoster(src.maxpreps, p.maxprepsSport),
+        maxprepsBracket(src.maxpreps, p.maxprepsSport, src.maxprepsName),
       ]);
       if (games === null) return null;
 
@@ -147,6 +155,7 @@ async function schoolPrograms(team: Team, src: SchoolSource): Promise<Fetched<Pr
         standings,
         roster: roster === null ? null : { coaches: [], players: roster },
         injuries: [],
+        postseason,
         // 전적이 올라와 있는 쪽이 지금 하는 종목이다. 비시즌에는 MaxPreps 도 비워 둔다.
         inSeason: !!standing?.record,
       } satisfies Program;

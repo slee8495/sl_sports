@@ -89,3 +89,32 @@ export function relative(value: string | Date | null): string {
 export function todayLabel(): string {
   return fmt(new Date(), { weekday: "long", month: "long", day: "numeric" });
 }
+
+/**
+ * 시간대 없이 온 태평양 벽시계("2026-05-12T15:15:00")를 진짜 시각으로.
+ *
+ * MaxPreps 브래킷은 시각을 구역 표시 없이 준다. 서버(UTC)가 그대로 읽으면 일곱 시간쯤
+ * 이르게 그려진다. 여름(-7)과 겨울(-8) 둘 다 대 보고, 태평양 시계로 되돌렸을 때 같은
+ * 글자가 나오는 쪽을 고른다.
+ */
+export function fromPacific(local: string | null): string | null {
+  const m = local?.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+  if (!m) return null;
+  const wall = Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]);
+  const clock: Intl.DateTimeFormatOptions = {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  };
+  // 벽시계 글자 그대로(UTC 로 읽은 것)와, 후보 시각을 태평양으로 되돌린 글자를 맞대 본다.
+  const want = fmt(new Date(wall), { ...clock, timeZone: "UTC" });
+  const key = (t: number) => fmt(new Date(t), clock);
+  for (const off of [7, 8]) {
+    const t = wall + off * 3_600_000;
+    if (key(t) === want) return new Date(t).toISOString();
+  }
+  return new Date(wall + 8 * 3_600_000).toISOString();
+}

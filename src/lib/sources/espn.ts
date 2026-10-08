@@ -9,14 +9,18 @@
  */
 
 import { unstable_cache } from "next/cache";
+import { orderBracket } from "./bracket";
 import { orderStandings } from "./split";
 import type { EspnSource } from "./teams";
 import type {
   Article,
+  BracketRound,
+  BracketTeam,
   Coach,
   Fetched,
   Game,
   GameStatus,
+  Matchup,
   Player,
   StandingsGroup,
   StandingsRow,
@@ -35,6 +39,8 @@ export const TTL = {
   injuries: 1_800,
   standings: 3_600,
   roster: 21_600,
+  /** 지난 날의 포스트시즌 스코어보드. 끝난 경기는 안 바뀐다. */
+  pastDay: 21_600,
 } as const;
 
 /**
@@ -101,6 +107,8 @@ type EspnCompetitor = {
   winner?: boolean;
   score?: string | { value?: number; displayValue?: string };
   team?: EspnTeamRef;
+  /** 토너먼트(대학)에서는 시드가 여기 온다. 프로는 99 같은 빈 값이다. */
+  curatedRank?: { current?: number };
 };
 
 type EspnCompetition = {
@@ -112,6 +120,16 @@ type EspnCompetition = {
   competitors?: EspnCompetitor[];
   status?: EspnStatus;
   notes?: { headline?: string }[];
+  /** "ALLSTAR" — 포스트시즌 주차에 프로볼이 끼어 온다. */
+  type?: { abbreviation?: string };
+  /** 플레이오프 시리즈. 단판에는 없다. */
+  series?: {
+    type?: string;
+    summary?: string;
+    completed?: boolean;
+    totalCompetitions?: number;
+    competitors?: { id?: string; wins?: number }[];
+  };
   tickets?: { summary?: string; links?: { href?: string }[] }[];
 };
 
@@ -123,6 +141,8 @@ type EspnEvent = {
   timeValid?: boolean;
   week?: { number?: number; text?: string };
   seasonType?: { name?: string; abbreviation?: string };
+  /** 3 = 포스트시즌, 5 = NBA 플레이인. */
+  season?: { year?: number; type?: number };
   competitions?: EspnCompetition[];
   links?: { href?: string; text?: string; rel?: string[] }[];
   status?: EspnStatus;
@@ -582,4 +602,277 @@ export async function espnInjuries(src: EspnSource): Promise<Fetched<Injury[]>> 
   );
 
   return rows.filter((r): r is Injury => r !== null);
+}
+
+/* ────────────────────────────── 포스트시즌 브래킷 ────────────────────────────── */
+
+/**
+ * 리그마다 포스트시즌을 읽는 법.
+ *
+ * ESPN 에는 **브래킷 주소가 없다**(bracket·postseason 류를 다 두드려 봤다, 전부 404). 있는 것은
+ * 날짜별·주차별 스코어보드이고, 경기마다 "NLDS - Game 4" 같은 이름표와 "LAD win series 3-1"
+ * 같은 시리즈 상태가 붙어 온다. 그걸 모아 브래킷을 세운다.
+ *
+ * - **day**: 날짜마다 한 번. 기간 조회(`dates=A-B`)는 400 을 준다(2026-10 확인).
+ * - **week**: 미식축구는 주차로 묶여 있어서 주차마다 한 번이면 된다.
+ *
+ * `keep` 은 그 리그의 포스트시즌 중 **브래킷인 것만** 남긴다 — 대학 풋볼의 볼 게임 마흔 개
+ * 중 플레이오프는 열한 개고, 대학 농구는 NIT·CBI 가 같은 날 같이 열린다.
+ * 팀이 아니라 리그에 딸린 것이라 `teams.ts` 가 아니라 여기 둔다. 같은 리그 팀을 더할 때는
+ * 손댈 게 없고, 표에 없는 리그는 날짜별로 다 읽는다.
+ */
+const POSTSEASON: Record<string, { by: "day" | "week"; query?: string; keep?: RegExp; playIn?: boolean }> = {
+  "football/nfl": { by: "week" },
+  "football/college-football": { by: "week", query: "groups=80&limit=200", keep: /College Football Playoff/i },
+  "baseball/mlb": { by: "day" },
+  "basketball/nba": { by: "day", playIn: true },
+  "hockey/nhl": { by: "day" },
+  "basketball/mens-college-basketball": {
+    by: "day",
+    query: "groups=100&limit=100",
+    keep: /NCAA Men's Basketball Championship/i,
+  },
+};
+
+type Round = { round: string; group: string | null; label: string | null };
+
+/**
+ * 경기 이름표를 라운드·묶음으로 가른다. 확인한 이름표(2025-26 시즌):
+ *
+ *   MLB  "ALWC - Game 2" · "NLDS - Game 4" · "ALDS - Game 4 If Necessary" · "World Series - Game 2"
+ *   NBA  "NBA Play-In - East - 7th Place vs 8th Place" · "West 1st Round - Game 3" ·
+ *        "East Semifinals - Game 4" · "East Finals - Game 4" · "NBA Finals - Game 4"
+ *   NHL  "East 1st Round - Game 4" · "West 2nd Round - Game 4" · ...
+ *   NFL  "NFC Wild Card Playoffs" · "AFC Divisional Playoffs" · "Super Bowl LX"
+ *   CFP  "College Football Playoff Quarterfinal at the Rose Bowl Presented by Prudential"
+ *   NCAA "NCAA Men's Basketball Championship - West Region - Sweet 16"
+ *
+ * 모르는 모양은 이름표 통째가 라운드 이름이 된다 — 틀리게 가르느니 덜 가르는 쪽이다.
+ */
+function roundOf(headline: string): Round {
+  // "ALDS - Game 4 If Necessary" — 열릴지 모르는 경기도 같은 시리즈다.
+  const h = headline.replace(/\s*-\s*Game \d+(\s+If Necessary)?\s*$/i, "").trim();
+
+  const mlb = h.match(/^(AL|NL)(WC|DS|CS)$/);
+  if (mlb) {
+    const name = { WC: "Wild Card Series", DS: "Division Series", CS: "Championship Series" }[mlb[2]] ?? h;
+    return { round: name, group: mlb[1], label: null };
+  }
+
+  const playIn = h.match(/^NBA Play-In - (East|West) - (.+)$/i);
+  if (playIn) return { round: "Play-In", group: playIn[1], label: playIn[2].replace(/ Place/g, "") };
+
+  const conf = h.match(/^(East|West)(?:ern)?(?: Conference)? (.+)$/);
+  if (conf) {
+    // "East Finals" 는 리그 결승이 아니라 컨퍼런스 결승이다. 결승과 헷갈리지 않게 이름을 늘린다.
+    const rest = conf[2].replace(/^(Semifinals|Finals?)$/i, "Conference $1");
+    return { round: rest, group: conf[1], label: null };
+  }
+
+  const nfl = h.match(/^(AFC|NFC) (Wild Card|Divisional|Championship)/);
+  if (nfl) return { round: nfl[2] === "Championship" ? "Conference Championship" : nfl[2], group: nfl[1], label: null };
+
+  const cfp = h.match(/^College Football Playoff (First Round|Quarterfinal|Semifinal|National Championship)(?:.* at the (.+))?/i);
+  if (cfp) {
+    const bowl = cfp[2]?.replace(/\s+Presented by.*$/i, "").trim() ?? null;
+    return { round: cfp[1], group: null, label: bowl };
+  }
+
+  const ncaa = h.match(/^NCAA Men's Basketball Championship - (?:(\w+) Region - )?(.+)$/i);
+  if (ncaa) return { round: ncaa[2], group: ncaa[1] ?? null, label: null };
+
+  return { round: h, group: null, label: null };
+}
+
+function bracketTeam(c: EspnCompetitor | undefined, ourTeamId: string): BracketTeam | null {
+  const t = c?.team;
+  if (!t?.displayName) return null;
+  const rank = c?.curatedRank?.current;
+  return {
+    name: t.displayName,
+    shortName: t.shortDisplayName ?? t.abbreviation ?? null,
+    logo: logoOf(t),
+    seed: typeof rank === "number" && rank > 0 && rank < 99 ? rank : null,
+    isUs: t.id === ourTeamId,
+    score: null,
+    won: false,
+  };
+}
+
+/** 한 경기에서 읽은 것. 시리즈는 이걸 여러 개 모아 매치업 하나가 된다. */
+type PostGame = { e: EspnEvent; comp: EspnCompetition; round: Round; status: GameStatus; at: string };
+
+/**
+ * 같은 매치업의 경기들을 한 장으로.
+ *
+ * 시리즈면 **최근에 열린 경기**의 시리즈 상태가 지금 상태다(이긴 수·"LAD win series 3-1").
+ * 두 팀의 위아래는 1차전 홈팀이 위 — 상위 시드가 1차전 홈이다. 시드가 있는 대학은 시드 순.
+ */
+function toMatchup(games: PostGame[], ourTeamId: string): Matchup | null {
+  const sorted = [...games].sort((a, b) => a.at.localeCompare(b.at));
+  const opener = sorted[0];
+  const played = sorted.filter((g) => g.status === "in" || g.status === "final");
+  const latest = played[played.length - 1] ?? opener;
+  const live = sorted.find((g) => g.status === "in") ?? null;
+  const upcoming = sorted.find((g) => g.status === "scheduled") ?? null;
+
+  const cs = opener.comp.competitors ?? [];
+  const home = cs.find((c) => c.homeAway === "home") ?? cs[0];
+  const away = cs.find((c) => c !== home);
+  let pair = [bracketTeam(home, ourTeamId), bracketTeam(away, ourTeamId)];
+  if (pair[0]?.seed != null && pair[1]?.seed != null && pair[1].seed < pair[0].seed) pair = [pair[1], pair[0]];
+  const [top, bottom] = pair;
+  if (!top || !bottom) return null;
+
+  const series = latest.comp.series;
+  const isSeries = series?.type === "playoff" && (series.totalCompetitions ?? 0) > 1;
+  const idOf = (name: string) => cs.find((c) => c.team?.displayName === name)?.team?.id;
+
+  let status: GameStatus;
+  if (isSeries) {
+    status = live ? "in" : series?.completed ? "final" : "scheduled";
+    for (const t of [top, bottom]) {
+      const wins = series?.competitors?.find((c) => c.id === idOf(t.name))?.wins;
+      t.score = typeof wins === "number" && played.length > 0 ? wins : null;
+    }
+    if (series?.completed) {
+      const max = Math.max(top.score ?? 0, bottom.score ?? 0);
+      for (const t of [top, bottom]) t.won = t.score === max && max > 0;
+    }
+  } else {
+    status = latest.status;
+    const comp = latest.comp;
+    for (const t of [top, bottom]) {
+      const c = comp.competitors?.find((x) => x.team?.displayName === t.name);
+      t.score = status === "in" || status === "final" ? scoreOf(c) : null;
+      t.won = status === "final" && c?.winner === true;
+    }
+  }
+
+  // 지금 하는 경기가 있으면 그 이닝·쿼터가, 아니면 시리즈 한 줄이 이 매치업의 한 줄이다.
+  const gameNo = (g: PostGame) => g.comp.notes?.[0]?.headline?.match(/Game (\d+)/i)?.[1];
+  let detail: string | null = null;
+  if (live) {
+    const no = isSeries ? gameNo(live) : null;
+    detail = [no ? `Game ${no}` : null, live.comp.status?.type?.shortDetail ?? null].filter(Boolean).join(" · ") || null;
+  } else if (isSeries && played.length > 0) {
+    detail = series?.summary ?? null;
+  } else if (isSeries && upcoming) {
+    detail = series?.totalCompetitions ? `Best of ${series.totalCompetitions}` : null;
+  }
+
+  return {
+    id: isSeries ? `${opener.round.round}-${[top.name, bottom.name].sort().join("-")}` : (opener.e.id ?? opener.at),
+    group: opener.round.group,
+    label: opener.round.label,
+    teams: [top, bottom],
+    series: isSeries,
+    status,
+    startsAt: (live ?? (status === "final" ? latest : upcoming ?? latest)).at,
+    detail,
+  };
+}
+
+/** YYYYMMDD — ESPN 의 `dates=` 모양. 날짜는 UTC 로 센다(창의 시작·끝을 ESPN 이 UTC 로 준다). */
+function ymd(t: number): string {
+  return new Date(t).toISOString().slice(0, 10).replace(/-/g, "");
+}
+
+async function fetchPostseason(path: string, ourTeamId: string): Promise<Fetched<BracketRound[]>> {
+  const how = POSTSEASON[path] ?? { by: "day" as const };
+  const [sport, league] = path.split("/");
+
+  // 지금 시즌이 몇 년인지, 그리고 주차형 리그면 포스트시즌 주차가 무엇인지.
+  const board = await read<{
+    leagues?: {
+      season?: { year?: number };
+      calendar?: { value?: string; startDate?: string; entries?: { value?: string }[] }[] | string[];
+    }[];
+  }>(`${SITE}/${path}/scoreboard`, TTL.live);
+  const year = board?.leagues?.[0]?.season?.year;
+  if (typeof year !== "number") return null;
+
+  // 포스트시즌 창. 플레이인은 그 앞에 따로 열린다(시즌 종류 5).
+  type Window = { startDate?: string; endDate?: string };
+  const typeUrl = (n: number) => `${CORE}/${sport}/leagues/${league}/seasons/${year}/types/${n}`;
+  const [post, playIn] = await Promise.all([
+    read<Window>(typeUrl(3), TTL.standings),
+    how.playIn ? read<Window>(typeUrl(5), TTL.standings) : Promise.resolve(null),
+  ]);
+  if (!post?.startDate) return null;
+
+  const start = Date.parse(playIn?.startDate ?? post.startDate);
+  const end = Date.parse(post.endDate ?? "");
+  const now = Date.now();
+  // **아직 안 열렸으면 없는 것이다.** 정규시즌 내내 빈 브래킷 탭을 띄우지 않는다.
+  if (!Number.isFinite(start) || now < start) return [];
+
+  const urls: { url: string; ttl: number }[] = [];
+  const extra = how.query ? `&${how.query}` : "";
+  if (how.by === "week") {
+    const cal = board?.leagues?.[0]?.calendar;
+    const postCal = Array.isArray(cal) ? cal.find((c) => typeof c === "object" && c.value === "3") : undefined;
+    const weeks = typeof postCal === "object" ? (postCal.entries ?? []).map((w) => w.value).filter(Boolean) : [];
+    for (const w of weeks) urls.push({ url: `${SITE}/${path}/scoreboard?dates=${year}&seasontype=3&week=${w}${extra}`, ttl: TTL.live });
+  } else {
+    // 오늘 다음 이틀까지 — 시리즈의 다음 경기 시각이 거기 있다. 끝난 날은 길게 캐시한다.
+    const last = Math.min(Number.isFinite(end) ? end : now, now + 2 * 86_400_000);
+    for (let t = start; t <= last; t += 86_400_000) {
+      const old = now - t > 2 * 86_400_000;
+      urls.push({ url: `${SITE}/${path}/scoreboard?dates=${ymd(t)}${extra}`, ttl: old ? TTL.pastDay : TTL.live });
+    }
+  }
+
+  const pages = await Promise.all(urls.map((u) => read<{ events?: EspnEvent[] }>(u.url, u.ttl)));
+  // 한 장이라도 못 읽으면 브래킷에 구멍이 난다. 구멍 난 브래킷은 틀린 브래킷이다.
+  if (pages.some((p) => p === null)) return null;
+
+  const seen = new Set<string>();
+  const games: PostGame[] = [];
+  for (const page of pages) {
+    for (const e of page?.events ?? []) {
+      const comp = e.competitions?.[0];
+      if (!e.id || !comp || seen.has(e.id)) continue;
+      seen.add(e.id);
+      const type = e.season?.type;
+      if (type !== 3 && !(how.playIn && type === 5)) continue;
+      if (comp.type?.abbreviation === "ALLSTAR") continue;
+      const headline = comp.notes?.[0]?.headline ?? "";
+      if (!headline || (how.keep && !how.keep.test(headline))) continue;
+      games.push({ e, comp, round: roundOf(headline), status: statusOf(comp.status ?? e.status), at: comp.date ?? e.date ?? "" });
+    }
+  }
+
+  // 시리즈는 라운드+두 팀으로, 단판은 경기 하나로 묶는다.
+  const buckets = new Map<string, PostGame[]>();
+  for (const g of games) {
+    const s = g.comp.series;
+    const isSeries = s?.type === "playoff" && (s.totalCompetitions ?? 0) > 1;
+    const ids = (g.comp.competitors ?? []).map((c) => c.team?.id ?? "").sort().join("-");
+    const key = isSeries ? `${g.round.round}|${g.round.group ?? ""}|${ids}` : `game|${g.e.id}`;
+    buckets.set(key, [...(buckets.get(key) ?? []), g]);
+  }
+
+  const rounds = new Map<string, Matchup[]>();
+  for (const list of buckets.values()) {
+    const m = toMatchup(list, ourTeamId);
+    if (!m) continue;
+    const name = list[0].round.round;
+    rounds.set(name, [...(rounds.get(name) ?? []), m]);
+  }
+
+  return orderBracket([...rounds.entries()].map(([name, matchups]) => ({ name, matchups })));
+}
+
+const cachedPostseason = unstable_cache(fetchPostseason, ["espn-postseason"], { revalidate: TTL.live });
+
+/**
+ * 이 팀 리그의 포스트시즌 브래킷.
+ *
+ * **우리 팀이 있든 없든 리그 전체를 준다.** `[]` 는 포스트시즌이 아직 안 열렸다는 것이고,
+ * null 은 못 읽었다는 것이다. 한 번 열리면 다음 시즌이 시작될 때까지(ESPN 의 시즌 해가
+ * 넘어갈 때까지) 남는다 — 우승팀은 겨울 내내 우승팀이다.
+ */
+export async function espnPostseason(src: EspnSource): Promise<Fetched<BracketRound[]>> {
+  return cachedPostseason(src.path, src.teamId);
 }

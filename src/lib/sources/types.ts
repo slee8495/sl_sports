@@ -129,3 +129,47 @@ export type TeamSnapshot = {
   venue: string | null;
   venueCity: string | null;
 };
+
+/* ────────────────────────────── 포스트시즌 ────────────────────────────── */
+
+/**
+ * 브래킷의 한 자리.
+ *
+ * **우리 팀이 없는 브래킷도 그린다.** 리그의 포스트시즌은 우리 팀이 떨어져도 계속되고,
+ * 골수팬은 그것도 본다 — 누가 우리를 떨어뜨렸는지, 그 팀이 어디까지 가는지.
+ */
+export type BracketTeam = {
+  name: string;
+  shortName: string | null;
+  logo: string | null;
+  /** 시드. 리그가 안 주면(MLB·NBA 의 ESPN 데이터) null — 짓지 않는다. */
+  seed: number | null;
+  isUs: boolean;
+  /** 시리즈면 이긴 경기 수, 단판이면 점수. 아직 안 했으면 null. */
+  score: number | null;
+  /** 이 매치업을 이기고 올라갔다. 안 끝났으면 false. */
+  won: boolean;
+};
+
+export type Matchup = {
+  id: string;
+  /** 이 매치업이 속한 쪽 — "AL", "East", "AFC", "West Region". 없으면 null. */
+  group: string | null;
+  /** 단판의 이름 — "Rose Bowl", "7th vs 8th". 없으면 null. */
+  label: string | null;
+  /** 두 자리. **아직 안 정해진 자리는 null 이다** — "Winner G3" 를 팀처럼 그리지 않는다. */
+  teams: [BracketTeam | null, BracketTeam | null];
+  /** 7전 4선승 같은 시리즈인가. 점수 칸이 이긴 경기 수인지 득점인지가 여기서 갈린다. */
+  series: boolean;
+  status: GameStatus;
+  /** 진행 중이거나 다음에 열릴 경기의 시각. 끝났으면 마지막 경기 시각. */
+  startsAt: string | null;
+  /** 한 줄 — "LAD win series 3-1", "Game 3 · Top 7th". */
+  detail: string | null;
+};
+
+export type BracketRound = {
+  /** "Division Series", "Quarterfinal", "Elite 8". */
+  name: string;
+  matchups: Matchup[];
+};

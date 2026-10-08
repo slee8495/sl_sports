@@ -21,10 +21,13 @@
  */
 
 import { unstable_cache } from "next/cache";
+import { fromPacific } from "@/lib/format";
 import { orderStandings } from "./split";
-import type { Fetched, Player, StandingsGroup, StandingsRow } from "./types";
+import type { BracketRound, BracketTeam, Fetched, Matchup, Player, StandingsGroup, StandingsRow } from "./types";
 
-const TTL = { team: 1_800, standings: 1_800, roster: 43_200 } as const;
+const TTL = { team: 1_800, standings: 1_800, roster: 43_200, bracket: 900 } as const;
+
+const UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)";
 
 /**
  * 페이지에 심긴 JSON 한 덩어리.
@@ -36,7 +39,7 @@ async function readNextData(url: string): Promise<Record<string, unknown> | null
     const res = await fetch(url, {
       cache: "no-store",
       signal: AbortSignal.timeout(20_000),
-      headers: { "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)" },
+      headers: { "user-agent": UA },
     });
     if (!res.ok) return null;
     const html = await res.text();
@@ -244,4 +247,162 @@ const cachedRoster = unstable_cache(fetchRoster, ["maxpreps-roster"], { revalida
 
 export async function maxprepsRoster(base: string, sport: string): Promise<Fetched<Player[]>> {
   return cachedRoster(base, sport);
+}
+
+/* ────────────────────────────── CIF 브래킷 ────────────────────────────── */
+
+type Tournament = {
+  tournamentName?: string;
+  tournamentStartDate?: string;
+  tournamentEndDate?: string;
+  isTournamentPlayOff?: boolean;
+  bracketName?: string;
+  bracketUrl?: string;
+};
+
+/** 팀 이름 자리에 오지만 팀이 아닌 것들. 아직 안 정해진 자리다. */
+const PLACEHOLDER = /^(|varsity opponent|tbd|bye|(winner|loser) (of )?g(ame)? ?\d+)$/i;
+
+function textOf(html: string): string {
+  return html
+    .replace(/<[^>]*>/g, "")
+    .replace(/&amp;/g, "&")
+    .replace(/&#39;|&apos;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * 브래킷 페이지를 라운드로.
+ *
+ * **이 페이지에는 심긴 JSON 이 없다** — 예전 모양의 HTML 이라 마크업을 읽는다. 그래서 이
+ * 파일의 다른 곳보다 더 깐깐하다: 매치업마다 팀 줄이 정확히 둘이 아니면 표가 바뀐 것으로
+ * 보고 **통째로 null** 이다. 확인한 페이지: 2025 CIF-SS 풋볼 D1 (8강→4강→결승, 승자 표시 있음).
+ *
+ * 생김새:
+ *   view(data-view-type) > round(data-round-index, 숨김이면 "치르지 않는 라운드")
+ *     > matchup(li, abbr title=태평양 벽시계) > team(li.matchwinner|matchloser > seed·name·result)
+ *
+ * 큰 브래킷은 왼쪽 반·오른쪽 반(horizontal-view 둘)과 결승 쪽(championship-view)으로 나뉘어
+ * 온다. 반쪽끼리는 라운드 번호가 같으니 합치고, 결승 쪽은 그 뒤에 잇는다.
+ */
+function parseBracket(html: string, ourName: string, ended: boolean): BracketRound[] | null {
+  const rounds = new Map<number, { name: string | null; matchups: Matchup[] }>();
+  let base = 0;
+  let deepest = -1;
+
+  for (const view of html.split(/<div id="view_/).slice(1)) {
+    const type = view.match(/data-view-type="([^"]*)"/)?.[1] ?? "";
+    if (/championship/.test(type)) base = deepest + 1;
+
+    for (const round of view.split(/<div class="round"/).slice(1)) {
+      if (/^[^>]*visibility:\s*hidden/.test(round)) continue;
+      const index = Number(round.match(/data-round-index="(\d+)"/)?.[1] ?? NaN);
+      if (!Number.isFinite(index)) return null;
+      const key = base + index;
+      deepest = Math.max(deepest, key);
+      const name = textOf(round.match(/<span class="round-name"[^>]*>([^<]*)/)?.[1] ?? "") || null;
+
+      const slot = rounds.get(key) ?? { name: null, matchups: [] };
+      slot.name ??= name;
+
+      for (const li of round.split(/<li data-matchup-index=/).slice(1)) {
+        const id = li.match(/id="matchup_([^"]+)"/)?.[1];
+        const teamsHtml = li.split(/<li class="team/).slice(1);
+        if (!id || teamsHtml.length !== 2) return null;
+
+        const teams = teamsHtml.map((t): BracketTeam | null => {
+          const name = textOf(t.match(/<span class="name"[^>]*>([\s\S]*?)<\/span>/)?.[1] ?? "");
+          if (PLACEHOLDER.test(name)) return null;
+          const seed = Number(textOf(t.match(/<span class="seed"[^>]*>([^<]*)/)?.[1] ?? ""));
+          const result = textOf(t.match(/<a class="result"[^>]*>([^<]*)/)?.[1] ?? "");
+          const logo = t.match(/<span class="mascotimage"[^>]*><img src="([^"]+)"/)?.[1]?.replace(/&amp;/g, "&") ?? null;
+          return {
+            name,
+            shortName: null,
+            logo,
+            seed: seed > 0 ? seed : null,
+            isUs: name === ourName,
+            score: result !== "" && Number.isFinite(Number(result)) ? Number(result) : null,
+            // 잘라 낸 조각이 `<li class="team` 바로 뒤에서 시작한다 — 따옴표 닫기 전까지가 그 줄의 class 다.
+            won: /^[^"]*matchwinner/.test(t),
+          };
+        }) as [BracketTeam | null, BracketTeam | null];
+
+        const [a, b] = teams;
+        const done = !!a && !!b && a.score != null && b.score != null;
+        // 승자 표시가 없는 페이지도 있다. 점수가 다 있으면 점수로 가린다.
+        if (done && !a.won && !b.won && a.score !== b.score) {
+          if ((a.score ?? 0) > (b.score ?? 0)) a.won = true;
+          else b.won = true;
+        }
+
+        slot.matchups.push({
+          id,
+          group: null,
+          label: null,
+          teams,
+          series: false,
+          status: done ? "final" : "scheduled",
+          startsAt: fromPacific(li.match(/<abbr title="([^"]+)"/)?.[1] ?? null),
+          detail: null,
+        });
+      }
+      rounds.set(key, slot);
+    }
+  }
+
+  /*
+    **끝난 토너먼트의 빈 자리는 버린다.** 진행 중이면 "TBD" 가 뜻이 있다(곧 채워진다). 다
+    끝났는데도 비어 있는 자리는 MaxPreps 가 끝내 안 채운 것이다 — 2026 CIF-SS 야구 D1 은
+    1라운드 뒤가 풀리그라 브래킷 페이지에 그 뒤가 영영 "Varsity Opponent" 로 남아 있다.
+    그걸 TBD 라운드 셋으로 그리면 아직 안 끝난 대회처럼 읽힌다.
+  */
+  const out = [...rounds.entries()]
+    .sort(([x], [y]) => x - y)
+    .map(([, r]) => ({ name: r.name, matchups: ended ? r.matchups.filter((m) => m.teams.some(Boolean)) : r.matchups }))
+    .filter((r) => r.matchups.length > 0)
+    .map((r, i) => ({ name: r.name ?? `Round ${i + 1}`, matchups: r.matchups }));
+  return out.length > 0 ? out : null;
+}
+
+async function fetchBracket(base: string, sport: string, ourName: string): Promise<Fetched<BracketRound[]>> {
+  // 이번 시즌 일정 페이지가 그 팀이 들어간 토너먼트를 알려 준다. 들어간 적이 없으면 빈 배열.
+  const pp = await readNextData(`${base}/${sport}/schedule/`);
+  if (!pp) return null;
+  const list = Array.isArray(pp.tournaments) ? (pp.tournaments as Tournament[]) : [];
+  // 같은 브래킷이 경기 수만큼 되풀이돼 온다. 플레이오프 중 가장 최근에 열린 하나.
+  const latest = list
+    .filter((t) => t.isTournamentPlayOff && t.bracketUrl)
+    .sort((x, y) => (y.tournamentStartDate ?? "").localeCompare(x.tournamentStartDate ?? ""))[0];
+  if (!latest?.bracketUrl) return [];
+
+  try {
+    const res = await fetch(latest.bracketUrl, {
+      cache: "no-store",
+      signal: AbortSignal.timeout(20_000),
+      headers: { "user-agent": UA },
+    });
+    if (!res.ok) return null;
+    // 끝난 날의 다음 날 아침까지는 진행 중으로 본다 — 결승 결과가 늦게 올라온다.
+    const end = Date.parse(fromPacific(latest.tournamentEndDate ?? null) ?? "");
+    const ended = Number.isFinite(end) && Date.now() > end + 36 * 3_600_000;
+    return parseBracket(await res.text(), ourName, ended);
+  } catch {
+    return null;
+  }
+}
+
+const cachedBracket = unstable_cache(fetchBracket, ["maxpreps-bracket"], { revalidate: TTL.bracket });
+
+/**
+ * CIF 플레이오프 브래킷 — 이 학교가 들어간 디비전 것.
+ *
+ * 고등학교에는 "리그 전체 브래킷" 이 하나가 아니다. CIF-SS 만 해도 디비전이 열몇 개라,
+ * **우리 학교가 들어간 디비전이 곧 그 브래킷이다.** 학교가 플레이오프에 못 나가면 MaxPreps 가
+ * 이 학교에 브래킷을 안 붙여 주므로 빈 배열이다.
+ */
+export async function maxprepsBracket(base: string, sport: string, ourName: string): Promise<Fetched<BracketRound[]>> {
+  return cachedBracket(base, sport, ourName);
 }

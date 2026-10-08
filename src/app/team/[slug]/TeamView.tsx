@@ -10,6 +10,7 @@ import type { Article, Fetched, Game, StandingsGroup, TeamSnapshot } from "@/lib
 import { dayLabel, gameLabel, relative, shortDate, timeLabel } from "@/lib/format";
 import { Empty, Failed, FormStrip, GameRow, LiveDot, PlayMark, scoreline, SectionTitle, Side, Tickets } from "@/components/Bits";
 import type { Highlight } from "@/lib/sources/youtube";
+import { BracketTab } from "./Bracket";
 
 type Props = {
   team: Team;
@@ -20,7 +21,7 @@ type Props = {
   highlights: Record<string, Highlight>;
 };
 
-type TabKey = "now" | "schedule" | "roster" | "standings" | "news";
+type TabKey = "now" | "schedule" | "roster" | "standings" | "playoffs" | "news";
 
 export function TeamView({ team, programs, news, live: liveNow, highlights }: Props) {
   /*
@@ -40,6 +41,7 @@ export function TeamView({ team, programs, news, live: liveNow, highlights }: Pr
   const roster = program?.roster ?? null;
   const standings = program?.standings ?? null;
   const injuries = program?.injuries ?? null;
+  const postseason = program?.postseason ?? null;
 
   /*
     **없는 탭은 안 그린다.** 고등학교 야구에는 아직 순위표가 없고(비시즌), 로스터도 종목마다
@@ -51,6 +53,8 @@ export function TeamView({ team, programs, news, live: liveNow, highlights }: Pr
     { key: "schedule", label: "Schedule", show: programs !== null },
     { key: "roster", label: "Roster", show: !!roster && roster.players.length > 0 },
     { key: "standings", label: "Standings", show: !!standings && standings.length > 0 },
+    // 포스트시즌이 열리면 생긴다 — **우리 팀이 거기 있든 없든.** 정규시즌에는 탭이 없다.
+    { key: "playoffs", label: "Playoffs", show: !!postseason && postseason.length > 0 },
     { key: "news", label: "News", show: !!news && news.length > 0 },
   ];
   const [tab, setTab] = useState<TabKey>("now");
@@ -131,6 +135,7 @@ export function TeamView({ team, programs, news, live: liveNow, highlights }: Pr
         {active === "schedule" && <ScheduleTab team={team} split={split} program={program} failed={programs === null} />}
         {active === "roster" && <RosterTab roster={roster} injuries={injuries} />}
         {active === "standings" && <StandingsTab standings={standings} accent={team.colors.primary} />}
+        {active === "playoffs" && <BracketTab rounds={postseason} accent={team.colors.primary} />}
         {active === "news" && <NewsTab news={news} />}
       </div>
     </main>
