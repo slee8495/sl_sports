@@ -268,7 +268,7 @@ export async function espnSnapshot(src: EspnSource): Promise<Fetched<TeamSnapsho
     team?: {
       logos?: EspnLogo[];
       standingSummary?: string;
-      record?: { items?: { type?: string; summary?: string }[] };
+      record?: { items?: { type?: string; summary?: string; stats?: { name?: string; value?: number }[] }[] };
       franchise?: { venue?: { fullName?: string; address?: { city?: string; state?: string } } };
     };
   }>(`${SITE}/${src.path}/teams/${src.teamId}`, TTL.snapshot);
@@ -280,8 +280,18 @@ export async function espnSnapshot(src: EspnSource): Promise<Fetched<TeamSnapsho
   const venue = t.franchise?.venue;
   const city = [venue?.address?.city, venue?.address?.state].filter(Boolean).join(", ");
 
+  /*
+    **하키 전적은 세 칸이다(W-L-OTL).** ESPN 의 summary 는 연장 패가 0 이면 그 칸을 떼고
+    "4-2" 로 보낸다. 그러면 표지는 두 칸, 순위표는 세 칸이라 같은 팀이 다르게 적힌다.
+    `otLosses` 가 오는 리그(하키)에서는 숫자로 직접 짠다.
+  */
+  const stat = (n: string) => total?.stats?.find((x) => x.name === n)?.value;
+  const [w, l, otl] = [stat("wins"), stat("losses"), stat("otLosses")];
+  const hockey =
+    typeof w === "number" && typeof l === "number" && typeof otl === "number" ? `${w}-${l}-${otl}` : null;
+
   return {
-    record: total?.summary ?? null,
+    record: hockey ?? total?.summary ?? null,
     standingSummary: t.standingSummary ?? null,
     logo: logoOf({ logos: t.logos }),
     venue: venue?.fullName ?? null,
