@@ -87,6 +87,11 @@ export type StandingsRow = {
   wins: number | null;
   losses: number | null;
   ties: number | null;
+  /**
+   * 연장·승부치기 패 — 하키만. 하키 순위는 이 패에도 1점을 주므로 W-L 만으로는 승점이
+   * 안 맞는다. 다른 리그에서는 null 이라 화면이 칸을 안 그린다.
+   */
+  otLosses: number | null;
   winPercent: string | null;
   gamesBehind: string | null;
   streak: string | null;

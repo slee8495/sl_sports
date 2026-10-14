@@ -526,6 +526,7 @@ export async function espnStandings(src: EspnSource): Promise<Fetched<StandingsG
             wins: num("wins") ?? fromRecord(0),
             losses: num("losses") ?? fromRecord(1),
             ties: num("ties") ?? fromRecord(2),
+            otLosses: num("otLosses"),
             /*
               승률도 대학에는 없다. 전적이 있으면 직접 센다 — 무승부는 반 승으로,
               이건 미식축구·축구가 쓰는 셈법이다.

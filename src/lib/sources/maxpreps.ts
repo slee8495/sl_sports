@@ -160,6 +160,7 @@ async function fetchStandings(
         wins: r.overallWins ?? null,
         losses: r.overallLosses ?? null,
         ties: r.overallTies ?? null,
+        otLosses: null,
         // 다른 리그 표와 같은 모양으로 — ".750" 처럼 앞의 0 을 뗀다.
         winPercent:
           typeof r.winningPercentage === "number" ? r.winningPercentage.toFixed(3).replace(/^0/, "") : null,

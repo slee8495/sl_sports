@@ -554,6 +554,13 @@ function StandingsTab({ standings, accent }: { standings: Fetched<StandingsGroup
           있을 때만 칸을 그린다 — 빈 칸만 늘어선 열은 표를 좁힐 뿐이다.
         */
         const showConf = group.rows.some((r) => r.conferenceRecord);
+        /*
+          **하키는 W-L 이 아니라 W-L-OTL 과 승점이다.** 연장 패에도 1점이 붙고 줄도 승점으로
+          선다. 그 표에서 승률과 게임차는 아무도 안 보는 값이라(ESPN 도 GB 를 "-" 로 보낸다)
+          그 자리에 OTL 과 PTS 를 둔다. 승점 칸을 OTL 유무로 가르는 것은, 야구·농구도
+          `points` 라는 이름의 다른 값을 보내기 때문이다.
+        */
+        const hockey = group.rows.some((r) => r.otLosses != null);
         return (
         <section key={`${group.parent ?? ""}-${group.name}`}>
           <SectionTitle aside={group.parent ?? undefined}>{group.name}</SectionTitle>
@@ -566,9 +573,16 @@ function StandingsTab({ standings, accent }: { standings: Fetched<StandingsGroup
                   <th className="pb-2 text-left font-normal">Team</th>
                   <th className="pb-2 text-right font-normal">W</th>
                   <th className="pb-2 text-right font-normal">L</th>
-                  <th className="pb-2 text-right font-normal">PCT</th>
+                  {hockey ? (
+                    <>
+                      <th className="pb-2 text-right font-normal">OTL</th>
+                      <th className="pb-2 text-right font-normal">PTS</th>
+                    </>
+                  ) : (
+                    <th className="pb-2 text-right font-normal">PCT</th>
+                  )}
                   {showConf && <th className="pb-2 text-right font-normal">CONF</th>}
-                  <th className="pb-2 text-right font-normal">GB</th>
+                  {!hockey && <th className="pb-2 text-right font-normal">GB</th>}
                   <th className="pb-2 text-right font-normal">STRK</th>
                 </tr>
               </thead>
@@ -594,9 +608,16 @@ function StandingsTab({ standings, accent }: { standings: Fetched<StandingsGroup
                     </td>
                     <td className="py-2 text-right">{r.wins ?? "—"}</td>
                     <td className="py-2 text-right">{r.losses ?? "—"}</td>
-                    <td className="py-2 text-right text-dim">{r.winPercent ?? "—"}</td>
+                    {hockey ? (
+                      <>
+                        <td className="py-2 text-right">{r.otLosses ?? "—"}</td>
+                        <td className="py-2 text-right font-medium">{r.points ?? "—"}</td>
+                      </>
+                    ) : (
+                      <td className="py-2 text-right text-dim">{r.winPercent ?? "—"}</td>
+                    )}
                     {showConf && <td className="py-2 text-right text-dim">{r.conferenceRecord ?? "—"}</td>}
-                    <td className="py-2 text-right text-dim">{r.gamesBehind ?? "—"}</td>
+                    {!hockey && <td className="py-2 text-right text-dim">{r.gamesBehind ?? "—"}</td>}
                     <td className="py-2 text-right text-dim">{r.streak ?? "—"}</td>
                   </tr>
                 ))}
