@@ -116,25 +116,32 @@ async function espnProgram(team: Team): Promise<Fetched<Program[]>> {
 }
 
 /**
- * "2nd in Big Ten" 의 등수를 **순위표의 자리로** 고쳐 쓴다.
+ * 히어로의 "Nth in ..." 을 **바로 아래 순위표의 자리로** 쓴다.
  *
- * ESPN 의 한 줄은 동률을 한 자리로 센다 — 4-0 두 팀이 1st, 3-1 두 팀이 다 2nd 다. 같은 화면의
- * 순위표는 타이브레이커까지 들어간 시드 순이라 USC 를 4위에 둔다. 그래서 히어로는 "2nd",
- * 표는 4 — 같은 팀이 두 등수로 적혀 있었다(소유자 지적).
+ * ESPN 의 한 줄을 그대로 쓰면 표와 어긋난다. 두 가지로:
  *
- * 한 줄이 가리키는 묶음이 우리 표에 그대로 있을 때만 고친다 — ESPN 의 짧은 이름("NL West")이
- * 같거나 이름에 들어 있으면("Pacific" ⊂ "Pacific Division").
- * MLS 의 "11th in MLS" 는 리그 전체 등수인데 우리 표는 컨퍼런스라, 그건 손대지 않는다.
+ * - **동률을 한 자리로 센다.** 4-0 두 팀이 1st, 3-1 두 팀이 다 2nd 다. 표는 타이브레이커까지
+ *   들어간 시드 순이라 USC 를 4위에 두는데 히어로는 "2nd" 였다(소유자 지적).
+ * - **다른 묶음을 센다.** LAFC 는 "11th in MLS"(리그 전체)인데 화면의 표는 서부 컨퍼런스고
+ *   거기서 6위다. MLS 순위는 컨퍼런스로 갈리므로 팬이 보는 등수도 그쪽이다(소유자 지적).
+ *
+ * 그래서 등수는 언제나 우리 팀이 든 첫 표(`espnStandings` 가 맨 앞에 둔다)에서 센다. 묶음 이름은
+ * ESPN 의 한 줄이 같은 표를 가리키면 그 말을 그대로 쓰고("NL West" — 표 이름은 "National League
+ * West"), 아니면 표 이름을 쓴다. 표가 없거나 줄을 못 세웠으면 ESPN 의 한 줄 그대로다.
  */
 function placeFromTable(snap: TeamSnapshot, standings: Fetched<StandingsGroup[]>): TeamSnapshot {
-  const m = snap.standingSummary?.match(/^\d+(?:st|nd|rd|th) in (.+)$/);
-  const group =
-    m &&
-    standings?.find((g) => g.ordered && (g.shortName === m[1] || g.name.includes(m[1])) && g.rows.some((r) => r.isUs));
-  if (!m || !group) return snap;
+  const group = standings?.find((g) => g.rows.some((r) => r.isUs));
+  if (!snap.standingSummary || !group?.ordered) return snap;
+
+  const said = snap.standingSummary.match(/^\d+(?:st|nd|rd|th) in (.+)$/)?.[1];
+  // 이름은 어느 쪽이 길 수도 있다 — "Big Ten Conference" 표에 "Big Ten", "Pacific" 표에 "Pacific Division".
+  const same = said && (group.shortName === said || group.name.includes(said) || said.includes(group.name));
+  // EPL 의 표 이름은 "2026-27 English Premier League" 다. 시즌은 떼고 쓴다.
+  const scope = same ? said : group.name.replace(/^\d{4}(-\d{2,4})?\s+/, "");
+
   const n = group.rows.findIndex((r) => r.isUs) + 1;
   const suffix = n % 100 >= 11 && n % 100 <= 13 ? "th" : (["th", "st", "nd", "rd"][n % 10] ?? "th");
-  return { ...snap, standingSummary: `${n}${suffix} in ${m[1]}` };
+  return { ...snap, standingSummary: `${n}${suffix} in ${scope}` };
 }
 
 /* ────────────────────────────── 학교 팀 ────────────────────────────── */
