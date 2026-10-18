@@ -24,6 +24,7 @@ import type { Article, Fetched, Game } from "./types";
 
 const TTL_SCHEDULE = 1_800;
 const TTL_NEWS = 3_600;
+const HOUR = 3_600_000;
 
 /** 접힌 줄을 편다(RFC 5545: 다음 줄이 공백으로 시작하면 이어진 줄이다). */
 function unfold(text: string): string[] {
@@ -163,9 +164,17 @@ export async function sidearmSchedule(src: SchoolSource, sportId: number): Promi
       **끝났는지는 결과가 말해 준다.** 학교 피드에는 상태 칸이 없다. 점수가 적혀 있으면 끝난
       것이고, 시작 시각이 지났는데 점수가 없으면 아직 안 올라온 것이다 — 그 둘을 같게 그리면
       토요일 아침에 "어제 경기 예정" 이 뜬다.
+
+      **다만 점수가 없다고 영원히 하는 중은 아니다.** 학교는 점수를 며칠씩 안 올리기도 한다
+      (2026-10 JSerra 전이 이틀째 "LIVE" 였다). 피드의 끝 시각(DTEND)에서 한 시간이 지나면
+      끝난 것으로 본다. 점수는 모르니 비워 둔다 — 지어내지 않는다.
     */
-    const started = startsAt ? new Date(startsAt).getTime() < now : false;
-    const status: Game["status"] = result ? "final" : started ? "in" : "scheduled";
+    const startMs = startsAt ? new Date(startsAt).getTime() : null;
+    const endStamp = e.DTEND ? parseStamp(e.DTEND) : null;
+    const endMs = endStamp ? new Date(endStamp).getTime() : startMs !== null ? startMs + 3 * HOUR : null;
+    const started = startMs !== null && startMs < now;
+    const over = endMs !== null && endMs + HOUR < now;
+    const status: Game["status"] = result || over ? "final" : started ? "in" : "scheduled";
 
     games.push({
       id: e.UID ?? `${summary}-${startsAt ?? ""}`,
