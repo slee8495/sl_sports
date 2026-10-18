@@ -120,12 +120,16 @@ export type BracketLayout = {
  *
  * 나무 모양이 안 나오는 브래킷(라운드가 하나뿐이거나, 칸 수가 안 맞으면)은 null — 화면이
  * 목록으로 그린다. 어긋난 나무는 틀린 대진을 그린다.
+ *
+ * **라운드마다 매치업이 하나뿐이면 사다리다**(KBO — 아래 순위 팀이 한 칸씩 올라가며 위 순위 팀과
+ * 붙는다). 나무로 펴면 첫 줄에 빈 상자 일곱 개가 생긴다. 그것도 null.
  */
 export function layoutBracket(rounds: BracketRound[]): BracketLayout | null {
   const pre = rounds.filter((r) => r.pre && r.matchups.length > 0);
   const main = rounds.filter((r) => !r.pre);
   const depth = main.length;
   if (depth < 2) return null;
+  if (depth > 2 && main.every((r) => r.matchups.length <= 1)) return null;
 
   const leaves = 2 ** (depth - 1);
   if (main[0].matchups.length > leaves) return null;

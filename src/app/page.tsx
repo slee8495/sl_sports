@@ -11,7 +11,7 @@ import { LiveDot, matchup, scoreline } from "@/components/Bits";
 */
 export const dynamic = "force-dynamic";
 
-/** 아홉 팀 중 지금 제일 중요한 한 경기. 하는 중인 경기가 있으면 그게 언제나 이긴다. */
+/** 열한 팀 중 지금 제일 중요한 한 경기. 하는 중인 경기가 있으면 그게 언제나 이긴다. */
 function headline(cards: ShelfCard[]): { card: ShelfCard; live: boolean } | null {
   const live = cards.find((c) => c.live);
   if (live) return { card: live, live: true };

@@ -55,6 +55,12 @@ export function splitPrograms(programs: { games: Game[] }[]): ScheduleSplit {
 }
 
 
+/** 1st · 2nd · 3rd · 11th · 22nd. */
+export function ordinal(n: number): string {
+  const suffix = n % 100 >= 11 && n % 100 <= 13 ? "th" : (["th", "st", "nd", "rd"][n % 10] ?? "th");
+  return `${n}${suffix}`;
+}
+
 /**
  * 끝난 경기에서 전적을 센다.
  *

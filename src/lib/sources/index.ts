@@ -28,9 +28,10 @@ import {
   type Roster,
 } from "./espn";
 import { maxprepsBracket, maxprepsRoster, maxprepsStandings, maxprepsTeam } from "./maxpreps";
+import { naverLive, naverNews, naverPostseason, naverSchedule, naverStandings } from "./naver";
 import { sidearmNews, sidearmSchedule } from "./sidearm";
-import { recordOf, splitSchedule } from "./split";
-import { fallbackSnapshot, type SchoolSource, type Team } from "./teams";
+import { ordinal, recordOf, splitSchedule } from "./split";
+import { fallbackSnapshot, type NaverSource, type SchoolSource, type Team } from "./teams";
 import type { Article, BracketRound, Fetched, Game, StandingsGroup, TeamSnapshot } from "./types";
 
 export type { Injury, Roster };
@@ -139,9 +140,58 @@ function placeFromTable(snap: TeamSnapshot, standings: Fetched<StandingsGroup[]>
   // EPL 의 표 이름은 "2026-27 English Premier League" 다. 시즌은 떼고 쓴다.
   const scope = same ? said : group.name.replace(/^\d{4}(-\d{2,4})?\s+/, "");
 
-  const n = group.rows.findIndex((r) => r.isUs) + 1;
-  const suffix = n % 100 >= 11 && n % 100 <= 13 ? "th" : (["th", "st", "nd", "rd"][n % 10] ?? "th");
-  return { ...snap, standingSummary: `${n}${suffix} in ${scope}` };
+  return { ...snap, standingSummary: `${ordinal(group.rows.findIndex((r) => r.isUs) + 1)} in ${scope}` };
+}
+
+/* ────────────────────────────── 네이버 팀(KBO·K리그) ────────────────────────────── */
+
+async function naverProgram(team: Team, src: NaverSource): Promise<Fetched<Program[]>> {
+  const [schedule, live, postseason] = await Promise.all([naverSchedule(src), naverLive(src), naverPostseason(src)]);
+  if (schedule === null) return null;
+  // 순위표는 일정과 같은 해를 읽는다 — 1월에 지난 시즌 일정을 보여 주는 중이면 표도 지난 시즌 것.
+  const standings = await naverStandings(src, schedule.seasonYear);
+
+  // 하는 중인 경기는 1분 캐시 쪽으로 갈아 끼운다(이유는 `espnProgram` 과 같다).
+  const games = live ? schedule.games.map((g) => (g.id === live.id ? live : g)) : schedule.games;
+
+  /*
+    전적과 한 줄은 순위표의 우리 줄에서 짓는다 — 히어로와 표가 같은 데서 나와야 안 어긋난다.
+    전적은 리그가 쓰는 순서대로: KBO 는 승-패-무, 축구는 승-무-패(ESPN 축구와 같다).
+  */
+  const group = standings?.[0];
+  const at = group?.rows.findIndex((r) => r.isUs) ?? -1;
+  const row = at >= 0 ? group?.rows[at] : undefined;
+  const record =
+    row?.wins == null || row.losses == null
+      ? recordOf(games)
+      : src.sport === "kfootball"
+        ? `${row.wins}-${row.ties ?? 0}-${row.losses}`
+        : row.ties
+          ? `${row.wins}-${row.losses}-${row.ties}`
+          : `${row.wins}-${row.losses}`;
+
+  return [
+    {
+      key: "main",
+      label: team.sport,
+      ball: BALLS[team.sport.toLowerCase()] ?? "football",
+      games,
+      pastSeason: schedule.isPastSeason ? schedule.seasonYear : null,
+      snapshot: {
+        record,
+        standingSummary: group?.ordered && at >= 0 ? `${ordinal(at + 1)} in ${src.leagueName}` : null,
+        logo: team.logo,
+        venue: team.homeVenue,
+        venueCity: null,
+      },
+      standings,
+      // 네이버에는 팀 로스터가 없다. 못 가져온 게 아니라 없는 것이다.
+      roster: { coaches: [], players: [] },
+      injuries: [],
+      postseason,
+      inSeason: true,
+    },
+  ];
 }
 
 /* ────────────────────────────── 학교 팀 ────────────────────────────── */
@@ -213,7 +263,9 @@ async function schoolPrograms(team: Team, src: SchoolSource): Promise<Fetched<Pr
  * 0건)과 남의 서버가 흔들린 순간을 화면이 같게 그리면 안 된다.
  */
 export async function getPrograms(team: Team): Promise<Fetched<Program[]>> {
-  return team.source.kind === "espn" ? espnProgram(team) : schoolPrograms(team, team.source);
+  if (team.source.kind === "espn") return espnProgram(team);
+  if (team.source.kind === "naver") return naverProgram(team, team.source);
+  return schoolPrograms(team, team.source);
 }
 
 /** 화면을 열었을 때 먼저 보여 줄 종목. 시즌 중인 것, 없으면 첫 번째. */
@@ -225,13 +277,15 @@ export function defaultProgram(programs: Program[]): Program | null {
 
 export async function getNews(team: Team, limit = 20): Promise<Fetched<Article[]>> {
   if (team.source.kind === "espn") return espnNews(team.source, limit);
+  if (team.source.kind === "naver") return naverNews(team.source, limit);
   // 학교 기사는 종목을 안 가린다. 학교가 하나고 기사도 몇 개 안 된다.
   return sidearmNews(team.source, limit);
 }
 
 export async function getLive(team: Team): Promise<Fetched<Game | null>> {
-  if (team.source.kind !== "espn") return null;
-  return espnLive(team.source);
+  if (team.source.kind === "espn") return espnLive(team.source);
+  if (team.source.kind === "naver") return naverLive(team.source);
+  return null;
 }
 
 /* ────────────────────────────── 홈 화면 ────────────────────────────── */

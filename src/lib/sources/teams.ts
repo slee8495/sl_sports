@@ -10,6 +10,10 @@
  * 지어낼 자리가 없다. 고등학교는 ESPN 에 아예 없다(검색해도 0건). 그래서 오렌지 루터란은
  * **학교 공식 athletics 사이트의 캘린더 피드(.ics)** 를 읽는다. 상대·홈/원정·결과·구장·
  * 중계 링크까지 거기 다 있고, 역시 공짜다.
+ *
+ * 한국 팀(LG 트윈스, 수원 삼성)도 ESPN 에 없다 — KBO 도 K리그도 리그 자체가 404 다. 그래서
+ * **네이버 스포츠의 공개 JSON** 을 읽는다. 일정·순위표·뉴스·포스트시즌 시리즈까지 한 모양으로
+ * 주고, 두 리그가 같은 문을 쓴다.
  */
 
 import type { TeamSnapshot } from "./types";
@@ -52,7 +56,24 @@ export type SchoolSource = {
   }[];
 };
 
-export type Source = EspnSource | SchoolSource;
+/**
+ * 네이버 스포츠에서 오는 팀(KBO·K리그).
+ *
+ * 승격·강등이 있는 리그(K리그1·2)는 `league` 한 칸만 바꾸면 된다 — 팀 코드는 리그를 옮겨도 같다.
+ */
+export type NaverSource = {
+  kind: "naver";
+  /** 네이버의 종목 묶음 — "kbaseball" | "kfootball". 주소의 앞부분이다. */
+  sport: "kbaseball" | "kfootball";
+  /** 네이버의 리그 — "kbo", "kleague", "kleague2". */
+  league: string;
+  /** 네이버의 팀 코드 — "LG", "02". 일정·순위표에서 우리를 찾는 열쇠다. */
+  teamCode: string;
+  /** 순위표와 히어로 한 줄에 쓰는 리그 이름 — "1st in K League 2". */
+  leagueName: string;
+};
+
+export type Source = EspnSource | SchoolSource | NaverSource;
 
 export type Team = {
   /** 주소에 쓰는 키. */
@@ -83,7 +104,7 @@ export type Team = {
    *
    * 경기별 링크를 쓰지 않는 이유: ESPN 은 오늘 경기에만 티켓 링크를 주고, 그 링크는
    * 재판매 사이트다. 구단 공식 페이지 한 줄이 늘 살아 있고, 날짜는 거기서 고르면 된다.
-   * 확인한 값이고(2026-09-18 전부 200, USC·LAFC·첼시는 2026-10-17), 리다이렉트도 제대로 따라간다.
+   * 확인한 값이고(2026-09-18 전부 200, USC·LAFC·첼시·LG·수원은 2026-10-17), 리다이렉트도 제대로 따라간다.
    */
   ticketsUrl: string | null;
   source: Source;
@@ -191,6 +212,39 @@ export const TEAMS: Team[] = [
     tagline: "Keep the Blue Flag Flying High",
   },
   {
+    slug: "lg-twins",
+    name: "LG Twins",
+    shortName: "LG",
+    nickname: "Twins",
+    league: "KBO",
+    level: "pro",
+    sport: "Baseball",
+    shelf: "Korea",
+    colors: { primary: "#C30452", secondary: "#000000", onPrimary: "#FFFFFF" },
+    logo: "https://sports-phinf.pstatic.net/team/kbo/default/LG.png",
+    homeVenue: "Jamsil Baseball Stadium",
+    ticketsUrl: "https://www.lgtwins.com/ticket/general",
+    source: { kind: "naver", sport: "kbaseball", league: "kbo", teamCode: "LG", leagueName: "KBO" },
+    tagline: "무적 LG",
+  },
+  {
+    slug: "suwon-bluewings",
+    name: "Suwon Samsung Bluewings",
+    shortName: "Suwon",
+    nickname: "Bluewings",
+    league: "K League 2",
+    level: "pro",
+    sport: "Soccer",
+    shelf: "Korea",
+    colors: { primary: "#1C3F94", secondary: "#E4002B", onPrimary: "#FFFFFF" },
+    logo: "https://sports-phinf.pstatic.net/team/kleague/default/02.png",
+    homeVenue: "Suwon World Cup Stadium",
+    ticketsUrl: "https://www.bluewings.kr/ticket",
+    // 2024 년부터 K리그2. 승격하면 league 를 "kleague" 로, leagueName 을 "K League 1" 로.
+    source: { kind: "naver", sport: "kfootball", league: "kleague2", teamCode: "02", leagueName: "K League 2" },
+    tagline: "Pride of Suwon",
+  },
+  {
     slug: "trojans",
     name: "USC Trojans",
     shortName: "USC",
@@ -264,7 +318,7 @@ export function findTeam(slug: string): Team | null {
 }
 
 /** 홈 화면의 서가 순서. 표에 없는 선반은 안 그린다. */
-export const SHELVES = ["Pro", "College", "High School"] as const;
+export const SHELVES = ["Pro", "Korea", "College", "High School"] as const;
 
 export function teamsByShelf(): { shelf: string; teams: Team[] }[] {
   return SHELVES.map((shelf) => ({

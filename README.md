@@ -1,6 +1,6 @@
 # SL Sports
 
-내가 응원하는 아홉 팀을 한 화면에. 첫 화면은 팀 로고가 꽂힌 **서가**고, 표지를 고르면
+내가 응원하는 열한 팀을 한 화면에. 첫 화면은 팀 로고가 꽂힌 **서가**고, 표지를 고르면
 그 팀의 다음 경기·일정·로스터·순위표·부상자·뉴스가 나온다.
 
 골수팬용이다. 입문자에게 종목을 설명하지 않는다 — 다음 홈경기가 언제인지, 누가 다쳤는지,
@@ -14,6 +14,8 @@
 | Anaheim Ducks | NHL | ESPN |
 | Los Angeles FC | MLS | ESPN |
 | Chelsea FC | Premier League | ESPN |
+| LG Twins | KBO | 네이버 스포츠 |
+| Suwon Samsung Bluewings | K League 2 | 네이버 스포츠 |
 | USC Trojans | Big Ten 풋볼 | ESPN |
 | UC San Diego Tritons | Big West 농구 | ESPN |
 | Orange Lutheran Lancers | Trinity League 풋볼·야구 | 학교 공식 캘린더 + MaxPreps |
@@ -29,6 +31,8 @@
 **모델을 안 태운다.** 공개 JSON 을 그냥 읽는다 — 비용이 0 이고, 지어낼 자리가 없다.
 
 - **ESPN** `site.api.espn.com` — 키 없음. 일정·로스터·코치·순위표·뉴스·부상자·라이브 스코어.
+- **네이버 스포츠** `api-gw.sports.naver.com` — 키 없음. ESPN 에 없는 KBO·K리그. 일정·순위표·
+  뉴스·라이브 스코어·KBO 포스트시즌 시리즈 전적. 로스터는 없다(선수 주소가 리그 전체 기록표다).
 - **오렌지 루터란 / 학교** `oluathletics.org` — 고등학교는 ESPN 에 아예 없다(검색해도 0건).
   학교가 스스로 내보내는 **캘린더 피드(.ics)** 와 **RSS** 를 읽는다. 상대·홈/원정·결과·구장·
   중계 링크까지 거기 다 있다. 내보내라고 만든 문이라 잘 안 부러진다.
@@ -49,8 +53,9 @@
 
 ```
 src/lib/sources/
-  teams.ts     아홉 팀 표. 팀을 더하고 빼는 일은 여기 한 줄을 고치는 일이다.
+  teams.ts     열한 팀 표. 팀을 더하고 빼는 일은 여기 한 줄을 고치는 일이다.
   espn.ts      ESPN 어댑터
+  naver.ts     네이버 스포츠 어댑터(KBO·K리그)
   sidearm.ts   학교 캘린더(.ics)·RSS 어댑터
   index.ts     화면이 부르는 창구. 어느 출처인지는 여기서 갈리고 여기서 끝난다.
   split.ts     일정을 다음 경기·다음 홈경기·최근 경기로 가르는 셈(바깥을 안 부른다)
