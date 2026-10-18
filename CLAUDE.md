@@ -25,5 +25,5 @@
 
 ```bash
 npm run build          # 타입 검사 포함
-npx next start -p 3100 # 일곱 팀 화면을 눌러 볼 것
+npx next start -p 3100 # 아홉 팀 화면을 눌러 볼 것
 ```

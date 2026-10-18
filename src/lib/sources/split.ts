@@ -65,7 +65,7 @@ export function splitPrograms(programs: { games: Game[] }[]): ScheduleSplit {
 export function recordOf(games: Game[]): string | null {
   const w = games.filter((g) => g.result === "W").length;
   const l = games.filter((g) => g.result === "L").length;
-  const t = games.filter((g) => g.result === "T").length;
+  const t = games.filter((g) => g.result === "T" || g.result === "D").length;
   if (w + l + t === 0) return null;
   return t > 0 ? `${w}-${l}-${t}` : `${w}-${l}`;
 }
@@ -81,7 +81,8 @@ export function recordOf(games: Game[]): string | null {
  *
  * 1. **플레이오프 시드** — 전부 채워져 있으면 이게 가장 정확하다. 리그가 직접 매긴 순서고,
  *    같은 승률이라도 타이브레이커까지 반영돼 있다.
- * 2. **승점** — 하키처럼 승수가 아니라 점수로 줄을 세우는 리그.
+ * 2. **승점** — 하키·축구처럼 승수가 아니라 점수로 줄을 세우는 리그. 승점이 같으면 득실차
+ *    (축구의 첫 타이브레이커다 — EPL 은 9월 내내 승점 같은 팀이 서넛씩 있다).
  * 3. **승률, 그다음 승수** — 나머지 전부.
  * 4. 아무 신호도 없으면(개막 전이라 전부 0) **줄을 세우지 않는다.** 그때는 화면도 번호를
  *    안 붙인다 — 모르는 순서에 1, 2, 3 을 적는 것이 지금 고친 바로 그 잘못이다.
@@ -92,6 +93,7 @@ export function orderStandings<T extends {
   winPercent: string | null;
   wins: number | null;
   losses: number | null;
+  differential: string | null;
 }>(rows: T[]): { rows: T[]; ordered: boolean } {
   if (rows.length === 0) return { rows, ordered: false };
 
@@ -100,7 +102,9 @@ export function orderStandings<T extends {
   }
 
   if (rows.some((r) => (r.points ?? 0) > 0)) {
-    return { rows: [...rows].sort((a, b) => (b.points ?? 0) - (a.points ?? 0)), ordered: true };
+    // "+12" · "-3" — Number 가 부호째 읽는다.
+    const gd = (r: T) => Number(r.differential ?? 0) || 0;
+    return { rows: [...rows].sort((a, b) => (b.points ?? 0) - (a.points ?? 0) || gd(b) - gd(a)), ordered: true };
   }
 
   // ".386" 처럼 앞의 0 이 빠진 채로 온다. Number(".386") 은 0.386 이라 그대로 읽힌다.

@@ -32,7 +32,7 @@ export type EspnSource = {
  * 학교 팀. **문이 두 개다.**
  *
  * 학교 공식 사이트(SIDEARM)는 일정과 학교 기사를 내보내고, 전적·리그 순위표·로스터는
- * MaxPreps 가 들고 있다. 둘 다 읽어야 이 팀 화면이 다른 여섯 팀만큼 채워진다.
+ * MaxPreps 가 들고 있다. 둘 다 읽어야 이 팀 화면이 다른 팀들만큼 채워진다.
  */
 export type SchoolSource = {
   kind: "school";
@@ -83,7 +83,7 @@ export type Team = {
    *
    * 경기별 링크를 쓰지 않는 이유: ESPN 은 오늘 경기에만 티켓 링크를 주고, 그 링크는
    * 재판매 사이트다. 구단 공식 페이지 한 줄이 늘 살아 있고, 날짜는 거기서 고르면 된다.
-   * 확인한 값이고(2026-09-18 전부 200), 리다이렉트도 제대로 따라간다.
+   * 확인한 값이고(2026-09-18 전부 200, USC·LAFC·첼시는 2026-10-17), 리다이렉트도 제대로 따라간다.
    */
   ticketsUrl: string | null;
   source: Source;
@@ -157,20 +157,54 @@ export const TEAMS: Team[] = [
     tagline: "Fear the Wings",
   },
   {
-    slug: "aztecs",
-    name: "San Diego State Aztecs",
-    shortName: "SDSU",
-    nickname: "Aztecs",
-    league: "Pac-12 · NCAA Football",
+    slug: "lafc",
+    name: "Los Angeles FC",
+    shortName: "LAFC",
+    nickname: "Black & Gold",
+    league: "MLS",
+    level: "pro",
+    sport: "Soccer",
+    shelf: "Pro",
+    colors: { primary: "#000000", secondary: "#C39E6D", onPrimary: "#FFFFFF" },
+    logo: "https://a.espncdn.com/i/teamlogos/soccer/500/18966.png",
+    homeVenue: "BMO Stadium",
+    ticketsUrl: "https://www.lafc.com/tickets/",
+    // 스탠딩 2 = 동부·서부 컨퍼런스. 플레이오프 자리를 가르는 것이 그 표다.
+    source: { kind: "espn", path: "soccer/usa.1", teamId: "18966", standingsLevel: 2 },
+    tagline: "Black & Gold",
+  },
+  {
+    slug: "chelsea",
+    name: "Chelsea FC",
+    shortName: "Chelsea",
+    nickname: "Blues",
+    league: "Premier League",
+    level: "pro",
+    sport: "Soccer",
+    shelf: "Pro",
+    colors: { primary: "#034694", secondary: "#DBA111", onPrimary: "#FFFFFF" },
+    logo: "https://a.espncdn.com/i/teamlogos/soccer/500/363.png",
+    homeVenue: "Stamford Bridge",
+    ticketsUrl: "https://www.chelseafc.com/en/tickets/mens-tickets",
+    // EPL 은 표가 하나(20팀)다. 그런데 level=1 은 빈 껍데기를 준다 — 표는 2 에 있다.
+    source: { kind: "espn", path: "soccer/eng.1", teamId: "363", standingsLevel: 2 },
+    tagline: "Keep the Blue Flag Flying High",
+  },
+  {
+    slug: "trojans",
+    name: "USC Trojans",
+    shortName: "USC",
+    nickname: "Trojans",
+    league: "Big Ten · NCAA Football",
     level: "college",
     sport: "Football",
     shelf: "College",
-    colors: { primary: "#A6192E", secondary: "#000000", onPrimary: "#FFFFFF" },
-    logo: "https://a.espncdn.com/i/teamlogos/ncaa/500/21.png",
-    homeVenue: "Snapdragon Stadium",
-    ticketsUrl: "https://goaztecs.com/tickets",
-    source: { kind: "espn", path: "football/college-football", teamId: "21", standingsLevel: 2 },
-    tagline: "I Believe That We Will Win",
+    colors: { primary: "#990000", secondary: "#FFCC00", onPrimary: "#FFFFFF" },
+    logo: "https://a.espncdn.com/i/teamlogos/ncaa/500/30.png",
+    homeVenue: "Los Angeles Memorial Coliseum",
+    ticketsUrl: "https://usctrojans.com/tickets",
+    source: { kind: "espn", path: "football/college-football", teamId: "30", standingsLevel: 2 },
+    tagline: "Fight On",
   },
   {
     slug: "tritons",

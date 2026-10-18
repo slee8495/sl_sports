@@ -109,6 +109,8 @@ type EspnCompetitor = {
   team?: EspnTeamRef;
   /** 토너먼트(대학)에서는 시드가 여기 온다. 프로는 99 같은 빈 값이다. */
   curatedRank?: { current?: number };
+  /** 승부차기 골. 축구 토너먼트에서 비긴 경기만. */
+  shootoutScore?: number;
 };
 
 type EspnCompetition = {
@@ -125,6 +127,8 @@ type EspnCompetition = {
   /** 플레이오프 시리즈. 단판에는 없다. */
   series?: {
     type?: string;
+    /** MLS 는 `type` 없이 "Playoff Series" 만 온다. */
+    title?: string;
     summary?: string;
     completed?: boolean;
     totalCompetitions?: number;
@@ -142,13 +146,20 @@ type EspnEvent = {
   week?: { number?: number; text?: string };
   seasonType?: { name?: string; abbreviation?: string };
   /** 3 = 포스트시즌, 5 = NBA 플레이인. */
-  season?: { year?: number; type?: number };
+  season?: { year?: number; type?: number; slug?: string };
   competitions?: EspnCompetition[];
   links?: { href?: string; text?: string; rel?: string[] }[];
   status?: EspnStatus;
+  /** 축구만 — 그 경기가 어느 대회인지. 한 팀이 리그·컵·대륙 대회를 같이 뛴다. */
+  league?: { slug?: string; abbreviation?: string };
 };
 
 /* ────────────────────────────── 옮기기 ────────────────────────────── */
+
+/** "soccer/eng.1" — 축구는 다른 종목과 읽는 법이 몇 군데 다르다. */
+function isSoccer(path: string): boolean {
+  return path.startsWith("soccer/");
+}
 
 function logoOf(t: EspnTeamRef | undefined): string | null {
   if (!t) return null;
@@ -188,19 +199,25 @@ function statusOf(s: EspnStatus | undefined): GameStatus {
  *
  * 리그마다 뜻 있는 것이 다르다 — NFL 은 몇 주차인지가 곧 정체성이고, 대학은 볼 게임 이름이,
  * 야구·농구는 시즌 종류(프리시즌/포스트시즌)만 뜻이 있다. **정규시즌이면 아무 말도 안 한다.**
+ *
+ * 축구는 **대회 이름**이 그 자리다 — 첼시 일정에는 프리미어리그 사이에 카라바오컵이 끼어 있다.
+ * 자기 리그 경기에는 안 적고, 다른 대회일 때만 적는다("Carabao Cup · Fourth Round").
+ * EPL 의 시즌 종류는 "2026-27 English Premier League" 라는 시즌 이름이라 정규시즌처럼 거른다.
  */
-function noteOf(e: EspnEvent, comp: EspnCompetition): string | null {
+function noteOf(e: EspnEvent, comp: EspnCompetition, path: string): string | null {
   const bits: string[] = [];
   const headline = comp.notes?.[0]?.headline;
   if (headline) bits.push(headline);
+  const cup = e.league?.slug && e.league.slug !== path.split("/")[1] ? e.league.abbreviation : null;
+  if (cup) bits.push(cup);
   if (e.week?.text) bits.push(e.week.text);
   const season = e.seasonType?.name;
-  if (season && !/regular/i.test(season)) bits.push(season);
+  if (season && !/regular/i.test(season) && !/^\d{4}/.test(season) && season !== cup) bits.push(season);
   return bits.length ? bits.join(" · ") : null;
 }
 
 /** 우리 팀 기준으로 한 경기를 읽는다. 상대가 누구인지는 우리가 어느 쪽인지를 알아야 나온다. */
-function toGame(e: EspnEvent, ourTeamId: string): Game | null {
+function toGame(e: EspnEvent, ourTeamId: string, path: string): Game | null {
   const comp = e.competitions?.[0];
   if (!comp || !e.id) return null;
 
@@ -220,7 +237,9 @@ function toGame(e: EspnEvent, ourTeamId: string): Game | null {
 
   let result: Game["result"] = null;
   if (done && ourScore != null && theirScore != null) {
-    result = ourScore > theirScore ? "W" : ourScore < theirScore ? "L" : "T";
+    // 축구에서는 비긴 것을 "D"(draw)라고 적는다. 팬이 읽는 글자가 그것이다.
+    const tie = isSoccer(path) ? "D" : "T";
+    result = ourScore > theirScore ? "W" : ourScore < theirScore ? "L" : tie;
   }
 
   const links = (e.links ?? [])
@@ -251,7 +270,7 @@ function toGame(e: EspnEvent, ourTeamId: string): Game | null {
     result,
     venue: comp.venue?.fullName ? (city ? `${comp.venue.fullName} · ${city}` : comp.venue.fullName) : null,
     broadcast: comp.broadcasts?.[0]?.media?.shortName ?? comp.broadcasts?.[0]?.names?.[0] ?? null,
-    note: noteOf(e, comp),
+    note: noteOf(e, comp, path),
     /*
       **진행 중일 때만 채운다.** 끝난 경기에 "4th Quarter 0:00" 이 남아 있으면 아직 하는
       중인 것처럼 보이고, 시작 전 경기의 "1st Quarter" 는 아예 거짓이다.
@@ -317,15 +336,26 @@ export type Schedule = {
  * 화면에 적는다.** 아무것도 없는 것과 지난 시즌인 것은 다르고, 팬은 지난 시즌 결과라도 본다.
  *
  * 받은 JSON 이 아니라 **추려 낸 결과를 캐시한다** — 이유는 `readFresh` 에 적었다.
+ *
+ * **축구는 두 번 읽는다.** 그냥 부르면 끝난 경기만 오고, 앞으로의 경기는 `fixture=true` 로 따로
+ * 와야 온다(2026-10 확인 — 첼시 7건 + 31건). 리그 주소 대신 `soccer/all` 을 부르는 것은 컵·대륙
+ * 대회 경기까지 한 줄에 받기 위해서다. 리그 주소로는 카라바오컵 8강이 일정에서 빠진다.
+ * 둘 중 하나라도 못 읽으면 못 읽은 것이다 — 반쪽 일정은 "다음 경기 없음" 으로 읽힌다.
  */
 async function fetchSchedule(path: string, teamId: string): Promise<Fetched<Schedule>> {
-  const json = await readFresh<{ events?: EspnEvent[]; season?: { year?: number } }>(
-    `${SITE}/${path}/teams/${teamId}/schedule`,
+  type Page = { events?: EspnEvent[]; season?: { year?: number } };
+  const base = `${SITE}/${isSoccer(path) ? "soccer/all" : path}/teams/${teamId}/schedule`;
+  const pages = await Promise.all(
+    (isSoccer(path) ? [base, `${base}?fixture=true`] : [base]).map((u) => readFresh<Page>(u)),
   );
-  if (!json) return null;
+  if (pages.some((p) => p === null)) return null;
+  const json: Page = { season: pages[0]?.season, events: pages.flatMap((p) => p?.events ?? []) };
 
+  // 두 번 읽은 것이 겹칠 수 있어 id 로 한 번씩만 남긴다.
   const toGames = (events: EspnEvent[]) =>
-    events.map((e) => toGame(e, teamId)).filter((g): g is Game => g !== null);
+    [...new Map(events.map((e) => [e.id, e])).values()]
+      .map((e) => toGame(e, teamId, path))
+      .filter((g): g is Game => g !== null);
 
   const games = toGames(json.events ?? []);
   const year = typeof json.season?.year === "number" ? json.season.year : null;
@@ -333,9 +363,7 @@ async function fetchSchedule(path: string, teamId: string): Promise<Fetched<Sche
     return { games, seasonYear: year, isPastSeason: false };
   }
 
-  const prev = await readFresh<{ events?: EspnEvent[] }>(
-    `${SITE}/${path}/teams/${teamId}/schedule?season=${year - 1}`,
-  );
+  const prev = await readFresh<{ events?: EspnEvent[] }>(`${base}?season=${year - 1}`);
   const prevGames = prev ? toGames(prev.events ?? []) : [];
   if (prevGames.length === 0) return { games: [], seasonYear: year, isPastSeason: false };
   return { games: prevGames, seasonYear: year - 1, isPastSeason: true };
@@ -358,7 +386,7 @@ export async function espnLive(src: EspnSource): Promise<Fetched<Game | null>> {
     const comp = e.competitions?.[0];
     const mine = comp?.competitors?.some((c) => c.team?.id === src.teamId);
     if (!mine) continue;
-    const game = toGame(e, src.teamId);
+    const game = toGame(e, src.teamId, src.path);
     /*
       **늙은 스코어보드를 거른다.** 데이터 캐시는 오래 잠들었다 깨면 낡은 값을 한 번 먼저
       내준다 — 9월 19일 7회 초 스코어보드가 10월에 "지금 하는 중" 으로 떴다(직접 봤다).
@@ -437,7 +465,11 @@ export async function espnRoster(src: EspnSource): Promise<Fetched<Roster>> {
     }
   }
 
-  const coaches: Coach[] = (json.coach ?? [])
+  /*
+    **축구의 `coach` 는 지금 감독이 아니다.** 첼시를 부르면 무리뉴·베니테스·그랜트·히딩크가
+    온다 — 역대 감독 몇 명이다(2026-10 확인). 그걸 "Head Coach" 로 그리면 거짓이라 안 쓴다.
+  */
+  const coaches: Coach[] = (isSoccer(src.path) ? [] : (json.coach ?? []))
     .map((c) => {
       const name = [c.firstName, c.lastName].filter(Boolean).join(" ").trim();
       if (!name) return null;
@@ -553,7 +585,7 @@ export async function espnStandings(src: EspnSource): Promise<Fetched<StandingsG
 
       // **받은 순서를 믿지 않는다.** 이유는 `orderStandings` 에 적었다.
       const { rows: sorted, ordered } = orderStandings(rows);
-      groups.push({ name: node.name ?? parent ?? "Standings", parent, rows: sorted, ordered });
+      groups.push({ name: node.name ?? parent ?? "Standings", parent, rows: sorted, ordered, soccer: isSoccer(src.path) });
     }
     for (const child of node.children ?? []) walk(child, node.name ?? parent);
   }
@@ -654,9 +686,22 @@ type PostseasonHow = {
   playIn?: boolean;
   rounds?: string[];
   pre?: string[];
-  seeds?: "standings" | "division";
+  seeds?: "standings" | "division" | "rank";
   /** 라운드마다 시드를 다시 매긴다(NFL — 1번 시드가 남은 팀 중 가장 낮은 시드와 붙는다). */
   reseed?: boolean;
+  /** 브래킷을 안 그린다. 탭이 안 뜬다(`[]`). */
+  none?: boolean;
+  /**
+   * 라운드를 경기 이름표가 아니라 **시즌 slug** 로 읽는다(MLS). 그 리그는 포스트시즌 경기의
+   * 시즌 종류가 3 이 아니라 라운드·시리즈마다 다른 번호로 오고, 이름표에는 라운드가 없다.
+   */
+  bySlug?: boolean;
+  /**
+   * 포스트시즌 창을 **정규시즌이 끝나는 날부터** 센다(MLS). 코어 API 의 플레이오프 창은 지난
+   * 시즌 날짜를 한 해 밀어 놓은 자리표라 못 믿는다 — 2026 의 와일드카드 창이 10월 20일인데
+   * 정규시즌은 11월 9일까지다(2026-10 확인). 정규시즌의 끝(types/1)은 실제 일정과 맞는다.
+   */
+  afterRegular?: boolean;
 };
 
 const POSTSEASON: Record<string, PostseasonHow> = {
@@ -696,6 +741,21 @@ const POSTSEASON: Record<string, PostseasonHow> = {
     pre: ["First Four"],
     rounds: ["1st Round", "2nd Round", "Sweet 16", "Elite 8", "Final Four", "National Championship"],
   },
+  /*
+    MLS: 컨퍼런스마다 8·9위 와일드카드 단판 → 1라운드 3전 2선승 → 컨퍼런스 준결승·결승 단판 →
+    MLS 컵. 짝은 1·8/9·4·5·2·7·3·6 표준 배치 그대로라 시드로 자리가 잡힌다. 시드는 순위표의
+    컨퍼런스 순위(`rank`)다 — `playoffSeed` 를 안 보낸다.
+  */
+  "soccer/usa.1": {
+    by: "day",
+    bySlug: true,
+    afterRegular: true,
+    pre: ["Wild Card"],
+    rounds: ["Round One", "Conference Semifinals", "Conference Final", "MLS Cup"],
+    seeds: "rank",
+  },
+  // 리그전뿐이다. 포스트시즌이 없다(types/3 이 404).
+  "soccer/eng.1": { by: "day", none: true },
 };
 
 type Round = { round: string; group: string | null; label: string | null };
@@ -748,6 +808,33 @@ function roundOf(headline: string): Round {
   return { round: h, group: null, label: null };
 }
 
+/**
+ * MLS 의 시즌 slug 를 라운드·묶음으로. 확인한 slug(2025):
+ *
+ *   "eastern-conference-playoffs---wild-card" · "western-conference-playoffs---round-one" ·
+ *   "...---semifinals" · "...---final" · "mls-cup"
+ *
+ * 포스트시즌 slug 가 아니면 null — 정규시즌 경기다.
+ */
+function slugRound(slug: string | undefined): Round | null {
+  if (slug === "mls-cup") return { round: "MLS Cup", group: null, label: null };
+  const m = slug?.match(/^(eastern|western)-conference-playoffs---(.+)$/);
+  if (!m) return null;
+  const names: Record<string, string> = {
+    "wild-card": "Wild Card",
+    "round-one": "Round One",
+    semifinals: "Conference Semifinals",
+    final: "Conference Final",
+  };
+  return { round: names[m[2]] ?? m[2], group: m[1] === "eastern" ? "East" : "West", label: null };
+}
+
+/** 여러 판으로 가르는 시리즈인가. NBA·NHL·MLB 는 `type: "playoff"`, MLS 는 `title` 만 온다. */
+function isSeriesOf(comp: EspnCompetition): boolean {
+  const s = comp.series;
+  return (s?.type === "playoff" || s?.title === "Playoff Series") && (s.totalCompetitions ?? 0) > 1;
+}
+
 /** 순위표에서 읽은 팀별 시드와 디비전. 팀 id 로 찾는다. */
 type Seeds = Map<string, { seed: number | null; division: string | null }>;
 
@@ -795,15 +882,22 @@ function toMatchup(games: PostGame[], ourTeamId: string, seeds: Seeds | null, sh
   if (!top || !bottom) return null;
 
   const series = latest.comp.series;
-  const isSeries = series?.type === "playoff" && (series.totalCompetitions ?? 0) > 1;
+  const isSeries = isSeriesOf(latest.comp);
   const idOf = (name: string) => cs.find((c) => c.team?.displayName === name)?.team?.id;
 
   let status: GameStatus;
   if (isSeries) {
     status = live ? "in" : series?.completed ? "final" : "scheduled";
     for (const t of [top, bottom]) {
+      /*
+        MLS 는 이긴 수(`wins`)를 안 보낸다. 그때는 끝난 경기의 승자를 센다 — 승부차기로 이긴
+        경기도 `winner` 가 붙어 온다(2025 MIN–SEA 3차전 3-3, 승부차기 7-6).
+      */
       const wins = series?.competitors?.find((c) => c.id === idOf(t.name))?.wins;
-      t.score = typeof wins === "number" && played.length > 0 ? wins : null;
+      const counted = played.filter(
+        (g) => g.status === "final" && g.comp.competitors?.find((c) => c.team?.displayName === t.name)?.winner === true,
+      ).length;
+      t.score = played.length > 0 ? (typeof wins === "number" ? wins : counted) : null;
     }
     if (series?.completed) {
       const max = Math.max(top.score ?? 0, bottom.score ?? 0);
@@ -826,9 +920,17 @@ function toMatchup(games: PostGame[], ourTeamId: string, seeds: Seeds | null, sh
     const no = isSeries ? gameNo(live) : null;
     detail = [no ? `Game ${no}` : null, live.comp.status?.type?.shortDetail ?? null].filter(Boolean).join(" · ") || null;
   } else if (isSeries && played.length > 0) {
-    detail = series?.summary ?? null;
+    // MLS 는 `summary` 가 없고 같은 말("LAFC win series 2-0")이 이름표에 온다.
+    detail = series?.summary ?? latest.comp.notes?.[0]?.headline ?? null;
   } else if (isSeries && upcoming) {
     detail = series?.totalCompetitions ? `Best of ${series.totalCompetitions}` : null;
+  } else if (!isSeries && status === "final") {
+    /*
+      **승부차기로 갈린 단판.** 점수 칸에는 2–2 만 남아서 누가 왜 올라갔는지가 안 보인다.
+      승부차기 골을 위아래 순서대로 적는다.
+    */
+    const pk = [top, bottom].map((t) => latest.comp.competitors?.find((c) => c.team?.displayName === t.name)?.shootoutScore);
+    if (pk.every((n) => typeof n === "number")) detail = `Penalties ${pk[0]}–${pk[1]}`;
   }
 
   // 지금 하는 경기의 점수. 시리즈의 `score` 는 이긴 수라서 이건 따로 든다.
@@ -856,6 +958,7 @@ function ymd(t: number): string {
 
 async function fetchPostseason(path: string, ourTeamId: string): Promise<Fetched<BracketRound[]>> {
   const how = POSTSEASON[path] ?? { by: "day" as const };
+  if (how.none) return [];
   const [sport, league] = path.split("/");
 
   // 지금 시즌이 몇 년인지, 그리고 주차형 리그면 포스트시즌 주차가 무엇인지.
@@ -871,14 +974,23 @@ async function fetchPostseason(path: string, ourTeamId: string): Promise<Fetched
   // 포스트시즌 창. 플레이인은 그 앞에 따로 열린다(시즌 종류 5).
   type Window = { startDate?: string; endDate?: string };
   const typeUrl = (n: number) => `${CORE}/${sport}/leagues/${league}/seasons/${year}/types/${n}`;
-  const [post, playIn] = await Promise.all([
-    read<Window>(typeUrl(3), TTL.standings),
-    how.playIn ? read<Window>(typeUrl(5), TTL.standings) : Promise.resolve(null),
-  ]);
-  if (!post?.startDate) return null;
-
-  const start = Date.parse(playIn?.startDate ?? post.startDate);
-  const end = Date.parse(post.endDate ?? "");
+  let start: number;
+  let end: number;
+  if (how.afterRegular) {
+    // 정규시즌 끝부터 60일 — MLS 는 와일드카드에서 MLS 컵까지 6주쯤이다.
+    const regular = await read<Window>(typeUrl(1), TTL.standings);
+    if (!regular?.endDate) return null;
+    start = Date.parse(regular.endDate);
+    end = start + 60 * 86_400_000;
+  } else {
+    const [post, playIn] = await Promise.all([
+      read<Window>(typeUrl(3), TTL.standings),
+      how.playIn ? read<Window>(typeUrl(5), TTL.standings) : Promise.resolve(null),
+    ]);
+    if (!post?.startDate) return null;
+    start = Date.parse(playIn?.startDate ?? post.startDate);
+    end = Date.parse(post.endDate ?? "");
+  }
   const now = Date.now();
   // **아직 안 열렸으면 없는 것이다.** 정규시즌 내내 빈 브래킷 탭을 띄우지 않는다.
   if (!Number.isFinite(start) || now < start) return [];
@@ -901,7 +1013,7 @@ async function fetchPostseason(path: string, ourTeamId: string): Promise<Fetched
 
   const [pages, seeds] = await Promise.all([
     Promise.all(urls.map((u) => read<{ events?: EspnEvent[] }>(u.url, u.ttl))),
-    how.seeds ? readSeeds(path, year) : Promise.resolve(null),
+    how.seeds ? readSeeds(path, year, how.seeds === "rank" ? "rank" : "playoffSeed") : Promise.resolve(null),
   ]);
   // 한 장이라도 못 읽으면 브래킷에 구멍이 난다. 구멍 난 브래킷은 틀린 브래킷이다.
   if (pages.some((p) => p === null)) return null;
@@ -914,20 +1026,25 @@ async function fetchPostseason(path: string, ourTeamId: string): Promise<Fetched
       const comp = e.competitions?.[0];
       if (!e.id || !comp || seen.has(e.id)) continue;
       seen.add(e.id);
-      const type = e.season?.type;
-      if (type !== 3 && !(how.playIn && type === 5)) continue;
-      if (comp.type?.abbreviation === "ALLSTAR") continue;
-      const headline = comp.notes?.[0]?.headline ?? "";
-      if (!headline || (how.keep && !how.keep.test(headline))) continue;
-      games.push({ e, comp, round: roundOf(headline), status: statusOf(comp.status ?? e.status), at: comp.date ?? e.date ?? "" });
+      let round: Round | null;
+      if (how.bySlug) {
+        round = slugRound(e.season?.slug);
+      } else {
+        const type = e.season?.type;
+        if (type !== 3 && !(how.playIn && type === 5)) continue;
+        if (comp.type?.abbreviation === "ALLSTAR") continue;
+        const headline = comp.notes?.[0]?.headline ?? "";
+        round = headline && !(how.keep && !how.keep.test(headline)) ? roundOf(headline) : null;
+      }
+      if (!round) continue;
+      games.push({ e, comp, round, status: statusOf(comp.status ?? e.status), at: comp.date ?? e.date ?? "" });
     }
   }
 
   // 시리즈는 라운드+두 팀으로, 단판은 경기 하나로 묶는다.
   const buckets = new Map<string, PostGame[]>();
   for (const g of games) {
-    const s = g.comp.series;
-    const isSeries = s?.type === "playoff" && (s.totalCompetitions ?? 0) > 1;
+    const isSeries = isSeriesOf(g.comp);
     const ids = (g.comp.competitors ?? []).map((c) => c.team?.id ?? "").sort().join("-");
     const key = isSeries ? `${g.round.round}|${g.round.group ?? ""}|${ids}` : `game|${g.e.id}`;
     buckets.set(key, [...(buckets.get(key) ?? []), g]);
@@ -972,13 +1089,13 @@ async function fetchPostseason(path: string, ourTeamId: string): Promise<Fetched
 }
 
 /**
- * 순위표의 플레이오프 시드와 디비전.
+ * 순위표의 플레이오프 시드와 디비전. 시드 칸의 이름은 리그마다 다르다(MLS 는 `rank`).
  *
  * 경기 데이터에는 시드가 없다(MLB·NBA·NFL 은 `curatedRank` 가 비어 있고, NHL 은 99 다).
  * 순위표의 `playoffSeed` 가 그 자리다 — 2026 NBA 동부가 DET 1 · BOS 2 · … · ORL 8 로, 리그
  * 브래킷 그림과 같다. 디비전 깊이(level=3)로 읽어 디비전 이름도 같이 든다.
  */
-async function readSeeds(path: string, year: number): Promise<Seeds | null> {
+async function readSeeds(path: string, year: number, stat: "playoffSeed" | "rank"): Promise<Seeds | null> {
   type Node = {
     name?: string;
     children?: Node[];
@@ -989,7 +1106,7 @@ async function readSeeds(path: string, year: number): Promise<Seeds | null> {
   const out: Seeds = new Map();
   const walk = (n: Node) => {
     for (const e of n.standings?.entries ?? []) {
-      const v = e.stats?.find((x) => x.name === "playoffSeed")?.value;
+      const v = e.stats?.find((x) => x.name === stat)?.value;
       if (e.team?.id) out.set(e.team.id, { seed: typeof v === "number" && v > 0 ? Math.round(v) : null, division: n.name ?? null });
     }
     for (const c of n.children ?? []) walk(c);

@@ -176,7 +176,7 @@ async function fetchStandings(
     });
 
   const { rows, ordered } = orderStandings(out);
-  return [{ name: groupName, parent: null, rows, ordered }];
+  return [{ name: groupName, parent: null, rows, ordered, soccer: false }];
 }
 
 const cachedStandings = unstable_cache(fetchStandings, ["maxpreps-standings"], {

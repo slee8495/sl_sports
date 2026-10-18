@@ -30,7 +30,8 @@ export type Game = {
   /** 우리 팀 점수 / 상대 점수. 하는 중이면 지금 점수, 시작 전이면 null. 승패는 `result`. */
   ourScore: number | null;
   theirScore: number | null;
-  result: "W" | "L" | "T" | null;
+  /** 비기면 "T", 축구에서는 "D". */
+  result: "W" | "L" | "T" | "D" | null;
   venue: string | null;
   /** 중계 채널 — "CBS", "ESPN+". */
   broadcast: string | null;
@@ -123,6 +124,11 @@ export type StandingsGroup = {
    * 같은 잘못이다.
    */
   ordered: boolean;
+  /**
+   * 축구 표인가. 칸이 W-D-L·득실·승점으로 바뀐다 — `ties` 가 무승부이고, 승률·게임차는
+   * 축구에서 아무도 안 보는 값이다.
+   */
+  soccer: boolean;
 };
 
 /** 팀 현재 상태 한 장. 팀 화면 맨 위 히어로가 이걸로 그려진다. */

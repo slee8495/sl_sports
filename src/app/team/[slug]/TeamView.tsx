@@ -561,6 +561,8 @@ function StandingsTab({ standings, accent }: { standings: Fetched<StandingsGroup
           `points` 라는 이름의 다른 값을 보내기 때문이다.
         */
         const hockey = group.rows.some((r) => r.otLosses != null);
+        // 축구는 따로 그린다 — 무승부 칸이 가운데 끼고, 줄은 승점·득실로 선다.
+        if (group.soccer) return <SoccerTable key={`${group.parent ?? ""}-${group.name}`} group={group} accent={accent} />;
         return (
         <section key={`${group.parent ?? ""}-${group.name}`}>
           <SectionTitle aside={group.parent ?? undefined}>{group.name}</SectionTitle>
@@ -628,6 +630,66 @@ function StandingsTab({ standings, accent }: { standings: Fetched<StandingsGroup
         );
       })}
     </div>
+  );
+}
+
+/**
+ * 축구 순위표. **GP · W · D · L · GD · PTS** — 축구 팬이 읽는 순서 그대로다.
+ *
+ * 경기 수는 따로 안 온다. 승·무·패를 더한다. 연승 칸은 ESPN 이 축구 표에 안 보낸다.
+ */
+function SoccerTable({ group, accent }: { group: StandingsGroup; accent: string }) {
+  const played = (r: StandingsGroup["rows"][number]) =>
+    r.wins == null || r.ties == null || r.losses == null ? null : r.wins + r.ties + r.losses;
+  return (
+    <section>
+      <SectionTitle aside={group.parent ?? undefined}>{group.name}</SectionTitle>
+
+      <div className="-mx-5 overflow-x-auto px-5">
+        <table className="w-full min-w-[420px] border-collapse text-sm">
+          <thead>
+            <tr className="text-[11px] text-faint">
+              {group.ordered && <th className="w-6 pb-2 text-left font-normal">#</th>}
+              <th className="pb-2 text-left font-normal">Team</th>
+              <th className="pb-2 text-right font-normal">GP</th>
+              <th className="pb-2 text-right font-normal">W</th>
+              <th className="pb-2 text-right font-normal">D</th>
+              <th className="pb-2 text-right font-normal">L</th>
+              <th className="pb-2 text-right font-normal">GD</th>
+              <th className="pb-2 text-right font-normal">PTS</th>
+            </tr>
+          </thead>
+          <tbody className="tnum">
+            {group.rows.map((r, i) => (
+              <tr
+                key={r.teamId ?? r.name}
+                className="border-t border-edge/70"
+                style={r.isUs ? { background: `${accent}12` } : undefined}
+              >
+                {group.ordered && <td className="py-2 pr-1 text-faint">{i + 1}</td>}
+                <td className="py-2 pr-2">
+                  <div className="flex items-center gap-2">
+                    {r.logo ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={r.logo} alt="" className="h-5 w-5 shrink-0 object-contain" />
+                    ) : (
+                      <span className="h-5 w-5 shrink-0" />
+                    )}
+                    <span className={`truncate ${r.isUs ? "font-semibold" : ""}`}>{r.name}</span>
+                  </div>
+                </td>
+                <td className="py-2 text-right text-dim">{played(r) ?? "—"}</td>
+                <td className="py-2 text-right">{r.wins ?? "—"}</td>
+                <td className="py-2 text-right">{r.ties ?? "—"}</td>
+                <td className="py-2 text-right">{r.losses ?? "—"}</td>
+                <td className="py-2 text-right text-dim">{r.differential ?? "—"}</td>
+                <td className="py-2 text-right font-medium">{r.points ?? "—"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
   );
 }
 

@@ -37,13 +37,14 @@ export type { Injury, Roster };
 export { splitSchedule, splitPrograms, recordOf, type ScheduleSplit } from "./split";
 
 /** 화면에서 종목을 고르는 단추에 그려지는 공. */
-export type Ball = "football" | "baseball" | "basketball" | "hockey";
+export type Ball = "football" | "baseball" | "basketball" | "hockey" | "soccer";
 
 const BALLS: Record<string, Ball> = {
   football: "football",
   baseball: "baseball",
   basketball: "basketball",
   hockey: "hockey",
+  soccer: "soccer",
 };
 
 /** 한 팀 안의 종목 하나. 이 안에 그 종목의 모든 것이 들어 있다. */

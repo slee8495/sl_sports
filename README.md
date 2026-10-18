@@ -1,6 +1,6 @@
 # SL Sports
 
-내가 응원하는 일곱 팀을 한 화면에. 첫 화면은 팀 로고가 꽂힌 **서가**고, 표지를 고르면
+내가 응원하는 아홉 팀을 한 화면에. 첫 화면은 팀 로고가 꽂힌 **서가**고, 표지를 고르면
 그 팀의 다음 경기·일정·로스터·순위표·부상자·뉴스가 나온다.
 
 골수팬용이다. 입문자에게 종목을 설명하지 않는다 — 다음 홈경기가 언제인지, 누가 다쳤는지,
@@ -12,7 +12,9 @@
 | Los Angeles Dodgers | MLB | ESPN |
 | LA Clippers | NBA | ESPN |
 | Anaheim Ducks | NHL | ESPN |
-| San Diego State Aztecs | Pac-12 풋볼 | ESPN |
+| Los Angeles FC | MLS | ESPN |
+| Chelsea FC | Premier League | ESPN |
+| USC Trojans | Big Ten 풋볼 | ESPN |
 | UC San Diego Tritons | Big West 농구 | ESPN |
 | Orange Lutheran Lancers | Trinity League 풋볼·야구 | 학교 공식 캘린더 + MaxPreps |
 
@@ -47,7 +49,7 @@
 
 ```
 src/lib/sources/
-  teams.ts     일곱 팀 표. 팀을 더하고 빼는 일은 여기 한 줄을 고치는 일이다.
+  teams.ts     아홉 팀 표. 팀을 더하고 빼는 일은 여기 한 줄을 고치는 일이다.
   espn.ts      ESPN 어댑터
   sidearm.ts   학교 캘린더(.ics)·RSS 어댑터
   index.ts     화면이 부르는 창구. 어느 출처인지는 여기서 갈리고 여기서 끝난다.

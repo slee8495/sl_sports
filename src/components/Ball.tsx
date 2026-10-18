@@ -56,6 +56,17 @@ export function Ball({ kind, size = 22 }: { kind: BallKind; size?: number }) {
     );
   }
 
+  if (kind === "soccer") {
+    return (
+      <svg {...common}>
+        <circle cx="12" cy="12" r="8.6" />
+        {/* 가운데 오각형과 거기서 뻗는 솔기. 농구공의 곧은 줄과 다르게 읽힌다. */}
+        <path d="M12 8.6l3.2 2.3-1.2 3.8h-4l-1.2-3.8Z" />
+        <path d="M12 8.6V3.4M15.2 10.9l4.9-1.6M14 14.7l3 4.1M10 14.7l-3 4.1M8.8 10.9 3.9 9.3" />
+      </svg>
+    );
+  }
+
   // 하키는 공이 아니라 퍽이다. 둥근 원으로 그리면 농구공과 구분이 안 된다.
   return (
     <svg {...common}>

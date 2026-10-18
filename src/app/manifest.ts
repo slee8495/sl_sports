@@ -9,7 +9,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "SL Sports",
     short_name: "SL Sports",
-    description: "Seven teams, one shelf.",
+    description: "Nine teams, one shelf.",
     start_url: "/",
     display: "standalone",
     background_color: "#f5f6f8",
