@@ -105,7 +105,7 @@ async function espnProgram(team: Team): Promise<Fetched<Program[]>> {
       ball: BALLS[team.sport.toLowerCase()] ?? "football",
       games,
       pastSeason: schedule.isPastSeason ? schedule.seasonYear : null,
-      snapshot: snapshot ?? fallbackSnapshot(team),
+      snapshot: placeFromTable(snapshot ?? fallbackSnapshot(team), standings),
       standings,
       roster,
       injuries,
@@ -113,6 +113,28 @@ async function espnProgram(team: Team): Promise<Fetched<Program[]>> {
       inSeason: true,
     },
   ];
+}
+
+/**
+ * "2nd in Big Ten" 의 등수를 **순위표의 자리로** 고쳐 쓴다.
+ *
+ * ESPN 의 한 줄은 동률을 한 자리로 센다 — 4-0 두 팀이 1st, 3-1 두 팀이 다 2nd 다. 같은 화면의
+ * 순위표는 타이브레이커까지 들어간 시드 순이라 USC 를 4위에 둔다. 그래서 히어로는 "2nd",
+ * 표는 4 — 같은 팀이 두 등수로 적혀 있었다(소유자 지적).
+ *
+ * 한 줄이 가리키는 묶음이 우리 표에 그대로 있을 때만 고친다 — ESPN 의 짧은 이름("NL West")이
+ * 같거나 이름에 들어 있으면("Pacific" ⊂ "Pacific Division").
+ * MLS 의 "11th in MLS" 는 리그 전체 등수인데 우리 표는 컨퍼런스라, 그건 손대지 않는다.
+ */
+function placeFromTable(snap: TeamSnapshot, standings: Fetched<StandingsGroup[]>): TeamSnapshot {
+  const m = snap.standingSummary?.match(/^\d+(?:st|nd|rd|th) in (.+)$/);
+  const group =
+    m &&
+    standings?.find((g) => g.ordered && (g.shortName === m[1] || g.name.includes(m[1])) && g.rows.some((r) => r.isUs));
+  if (!m || !group) return snap;
+  const n = group.rows.findIndex((r) => r.isUs) + 1;
+  const suffix = n % 100 >= 11 && n % 100 <= 13 ? "th" : (["th", "st", "nd", "rd"][n % 10] ?? "th");
+  return { ...snap, standingSummary: `${n}${suffix} in ${m[1]}` };
 }
 
 /* ────────────────────────────── 학교 팀 ────────────────────────────── */

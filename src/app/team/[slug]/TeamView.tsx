@@ -573,19 +573,19 @@ function StandingsTab({ standings, accent }: { standings: Fetched<StandingsGroup
                 <tr className="text-[11px] text-faint">
                   {group.ordered && <th className="w-6 pb-2 text-left font-normal">#</th>}
                   <th className="pb-2 text-left font-normal">Team</th>
-                  <th className="pb-2 text-right font-normal">W</th>
-                  <th className="pb-2 text-right font-normal">L</th>
+                  <th className="pb-2 pl-3 text-right font-normal">W</th>
+                  <th className="pb-2 pl-3 text-right font-normal">L</th>
                   {hockey ? (
                     <>
-                      <th className="pb-2 text-right font-normal">OTL</th>
-                      <th className="pb-2 text-right font-normal">PTS</th>
+                      <th className="pb-2 pl-3 text-right font-normal">OTL</th>
+                      <th className="pb-2 pl-3 text-right font-normal">PTS</th>
                     </>
                   ) : (
-                    <th className="pb-2 text-right font-normal">PCT</th>
+                    <th className="pb-2 pl-3 text-right font-normal">PCT</th>
                   )}
-                  {showConf && <th className="pb-2 text-right font-normal">CONF</th>}
-                  {!hockey && <th className="pb-2 text-right font-normal">GB</th>}
-                  <th className="pb-2 text-right font-normal">STRK</th>
+                  {showConf && <th className="pb-2 pl-3 text-right font-normal">CONF</th>}
+                  {!hockey && <th className="pb-2 pl-3 text-right font-normal">GB</th>}
+                  <th className="pb-2 pl-3 text-right font-normal">STRK</th>
                 </tr>
               </thead>
               <tbody className="tnum">
@@ -608,19 +608,19 @@ function StandingsTab({ standings, accent }: { standings: Fetched<StandingsGroup
                         <span className={`truncate ${r.isUs ? "font-semibold" : ""}`}>{r.name}</span>
                       </div>
                     </td>
-                    <td className="py-2 text-right">{r.wins ?? "—"}</td>
-                    <td className="py-2 text-right">{r.losses ?? "—"}</td>
+                    <td className="py-2 pl-3 text-right">{r.wins ?? "—"}</td>
+                    <td className="py-2 pl-3 text-right">{r.losses ?? "—"}</td>
                     {hockey ? (
                       <>
-                        <td className="py-2 text-right">{r.otLosses ?? "—"}</td>
-                        <td className="py-2 text-right font-medium">{r.points ?? "—"}</td>
+                        <td className="py-2 pl-3 text-right">{r.otLosses ?? "—"}</td>
+                        <td className="py-2 pl-3 text-right font-medium">{r.points ?? "—"}</td>
                       </>
                     ) : (
-                      <td className="py-2 text-right text-dim">{r.winPercent ?? "—"}</td>
+                      <td className="py-2 pl-3 text-right text-dim">{r.winPercent ?? "—"}</td>
                     )}
-                    {showConf && <td className="py-2 text-right text-dim">{r.conferenceRecord ?? "—"}</td>}
-                    {!hockey && <td className="py-2 text-right text-dim">{r.gamesBehind ?? "—"}</td>}
-                    <td className="py-2 text-right text-dim">{r.streak ?? "—"}</td>
+                    {showConf && <td className="py-2 pl-3 text-right text-dim">{r.conferenceRecord ?? "—"}</td>}
+                    {!hockey && <td className="py-2 pl-3 text-right text-dim">{r.gamesBehind ?? "—"}</td>}
+                    <td className="py-2 pl-3 text-right text-dim">{r.streak ?? "—"}</td>
                   </tr>
                 ))}
               </tbody>
@@ -651,12 +651,12 @@ function SoccerTable({ group, accent }: { group: StandingsGroup; accent: string 
             <tr className="text-[11px] text-faint">
               {group.ordered && <th className="w-6 pb-2 text-left font-normal">#</th>}
               <th className="pb-2 text-left font-normal">Team</th>
-              <th className="pb-2 text-right font-normal">GP</th>
-              <th className="pb-2 text-right font-normal">W</th>
-              <th className="pb-2 text-right font-normal">D</th>
-              <th className="pb-2 text-right font-normal">L</th>
-              <th className="pb-2 text-right font-normal">GD</th>
-              <th className="pb-2 text-right font-normal">PTS</th>
+              <th className="pb-2 pl-3 text-right font-normal">GP</th>
+              <th className="pb-2 pl-3 text-right font-normal">W</th>
+              <th className="pb-2 pl-3 text-right font-normal">D</th>
+              <th className="pb-2 pl-3 text-right font-normal">L</th>
+              <th className="pb-2 pl-3 text-right font-normal">GD</th>
+              <th className="pb-2 pl-3 text-right font-normal">PTS</th>
             </tr>
           </thead>
           <tbody className="tnum">
@@ -678,12 +678,12 @@ function SoccerTable({ group, accent }: { group: StandingsGroup; accent: string 
                     <span className={`truncate ${r.isUs ? "font-semibold" : ""}`}>{r.name}</span>
                   </div>
                 </td>
-                <td className="py-2 text-right text-dim">{played(r) ?? "—"}</td>
-                <td className="py-2 text-right">{r.wins ?? "—"}</td>
-                <td className="py-2 text-right">{r.ties ?? "—"}</td>
-                <td className="py-2 text-right">{r.losses ?? "—"}</td>
-                <td className="py-2 text-right text-dim">{r.differential ?? "—"}</td>
-                <td className="py-2 text-right font-medium">{r.points ?? "—"}</td>
+                <td className="py-2 pl-3 text-right text-dim">{played(r) ?? "—"}</td>
+                <td className="py-2 pl-3 text-right">{r.wins ?? "—"}</td>
+                <td className="py-2 pl-3 text-right">{r.ties ?? "—"}</td>
+                <td className="py-2 pl-3 text-right">{r.losses ?? "—"}</td>
+                <td className="py-2 pl-3 text-right text-dim">{r.differential ?? "—"}</td>
+                <td className="py-2 pl-3 text-right font-medium">{r.points ?? "—"}</td>
               </tr>
             ))}
           </tbody>

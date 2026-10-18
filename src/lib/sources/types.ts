@@ -113,6 +113,8 @@ export type StandingsRow = {
 export type StandingsGroup = {
   /** "AFC West", "Mountain West", "Big West". */
   name: string;
+  /** ESPN 의 짧은 이름 — "NL West", "Big Ten". 팀 한 줄("5th in NL West")이 이 이름으로 묶음을 가리킨다. */
+  shortName: string | null;
   /** 그 위 묶음 — "American Football Conference". 없으면 null. */
   parent: string | null;
   rows: StandingsRow[];

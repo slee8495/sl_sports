@@ -526,6 +526,7 @@ export async function espnStandings(src: EspnSource): Promise<Fetched<StandingsG
   type Node = {
     name?: string;
     abbreviation?: string;
+    shortName?: string;
     children?: Node[];
     standings?: {
       entries?: {
@@ -585,7 +586,14 @@ export async function espnStandings(src: EspnSource): Promise<Fetched<StandingsG
 
       // **받은 순서를 믿지 않는다.** 이유는 `orderStandings` 에 적었다.
       const { rows: sorted, ordered } = orderStandings(rows);
-      groups.push({ name: node.name ?? parent ?? "Standings", parent, rows: sorted, ordered, soccer: isSoccer(src.path) });
+      groups.push({
+        name: node.name ?? parent ?? "Standings",
+        shortName: node.shortName ?? null,
+        parent,
+        rows: sorted,
+        ordered,
+        soccer: isSoccer(src.path),
+      });
     }
     for (const child of node.children ?? []) walk(child, node.name ?? parent);
   }
