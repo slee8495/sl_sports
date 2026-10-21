@@ -29,12 +29,13 @@ export default function Cities() {
                 style={{ boxShadow: "0 10px 20px -14px rgba(16,20,28,.5)" }}
               >
                 <div className="flex items-baseline justify-between gap-3">
-                  <h2 className="wide text-[34px] leading-none font-semibold">{city.name}</h2>
-                  <span className="text-xs text-faint">{teams.length} teams</span>
+                  {/* 도시 이름은 팻말이지 제목이 아니다. 넓힌 글꼴은 경기 제목에만 쓴다. */}
+                  <h2 className="text-[17px] leading-tight font-semibold">{city.name}</h2>
+                  <span className="text-xs text-faint">{teams.length} {teams.length === 1 ? "team" : "teams"}</span>
                 </div>
 
                 {/* 로고 줄. 이름을 읽지 않고 어느 쪽인지 아는 자리다. */}
-                <div className="mt-5 flex flex-wrap gap-2">
+                <div className="mt-4 flex flex-wrap gap-2">
                   {teams.map((t) => (
                     <span
                       key={t.slug}
