@@ -16,7 +16,7 @@ export default function Cities() {
     <main>
       <header className="pt-2 pb-7">
         <p className="text-xs tracking-wide text-faint">{todayLabel()}</p>
-        <h1 className="wide mt-3 text-[26px] leading-[1.05] font-semibold sm:text-[32px]">SL Sports</h1>
+        <h1 className="mt-2 text-[22px] leading-tight font-semibold">SL Sports</h1>
       </header>
 
       <div className="grid gap-4 sm:grid-cols-2">
