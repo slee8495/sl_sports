@@ -1,10 +1,13 @@
 # SL Sports
 
-내가 응원하는 열한 팀을 한 화면에. 첫 화면은 팀 로고가 꽂힌 **서가**고, 표지를 고르면
-그 팀의 다음 경기·일정·로스터·순위표·부상자·뉴스가 나온다.
+내가 응원하는 열여섯 팀을 한 화면에. 첫 화면에서 **LA** 와 **NY** 중 하나를 고르면 그 도시의
+팀 로고가 꽂힌 **서가**가 나오고, 표지를 고르면 그 팀의 다음 경기·일정·로스터·순위표·부상자·
+뉴스가 나온다.
 
 골수팬용이다. 입문자에게 종목을 설명하지 않는다 — 다음 홈경기가 언제인지, 누가 다쳤는지,
 지금 몇 위인지를 **빨리** 보여 주는 것이 전부다.
+
+**LA** — 남부 캘리포니아에서 따라온 응원 묶음이라 첼시·LG·수원도 여기 있다.
 
 | 팀 | 리그 | 출처 |
 | --- | --- | --- |
@@ -19,6 +22,19 @@
 | USC Trojans | Big Ten 풋볼 | ESPN |
 | UC San Diego Tritons | Big West 농구 | ESPN |
 | Orange Lutheran Lancers | Trinity League 풋볼·야구 | 학교 공식 캘린더 + MaxPreps |
+
+**NY**
+
+| 팀 | 리그 | 출처 |
+| --- | --- | --- |
+| New York Yankees | MLB | ESPN |
+| Brooklyn Nets | NBA | ESPN |
+| New York Islanders | NHL | ESPN |
+| New York Jets | NFL | ESPN |
+| New York City FC | MLS | ESPN |
+
+NYCFC 는 지금 양키 스타디움을 빌려 쓴다. 퀸즈의 Etihad Park(2027 시즌 개장 예정)로 옮기면
+`teams.ts` 의 `homeVenue` 한 줄을 고친다 — 경기별 구장은 ESPN 이 주므로 저절로 바뀐다.
 
 **배포:** Vercel — `master` 에 push 하면 production 으로 나간다(2026-10-04 까지는 production
 브랜치가 없는 `main` 으로 잡혀 있어서 push 가 Preview 로만 갔다). 태평양 시간으로 그린다(팀도
@@ -53,14 +69,15 @@
 
 ```
 src/lib/sources/
-  teams.ts     열한 팀 표. 팀을 더하고 빼는 일은 여기 한 줄을 고치는 일이다.
+  teams.ts     열여섯 팀 표(도시 칸 포함). 팀을 더하고 빼는 일은 여기 한 줄을 고치는 일이다.
   espn.ts      ESPN 어댑터
   naver.ts     네이버 스포츠 어댑터(KBO·K리그)
   sidearm.ts   학교 캘린더(.ics)·RSS 어댑터
   index.ts     화면이 부르는 창구. 어느 출처인지는 여기서 갈리고 여기서 끝난다.
   split.ts     일정을 다음 경기·다음 홈경기·최근 경기로 가르는 셈(바깥을 안 부른다)
 src/app/
-  page.tsx           서가
+  page.tsx           도시 고르기 (LA · NY)
+  [city]/            도시 서가
   team/[slug]/       팀 화면 (Now · Schedule · Roster · Standings · News)
 ```
 

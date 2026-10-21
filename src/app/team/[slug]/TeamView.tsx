@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import type { Team } from "@/lib/sources/teams";
+import { findCity, type Team } from "@/lib/sources/teams";
 import { defaultProgram, type Injury, type Program, type Roster, type ScheduleSplit } from "@/lib/sources";
 import { recordOf, splitSchedule } from "@/lib/sources/split";
 import { Ball } from "@/components/Ball";
@@ -64,8 +64,8 @@ export function TeamView({ team, programs, news, live: liveNow, highlights }: Pr
 
   return (
     <main style={{ ["--team" as string]: team.colors.primary, ["--team-2" as string]: team.colors.secondary }}>
-      <Link href="/" className="inline-block py-2 text-xs text-faint hover:text-dim">
-        ← Shelf
+      <Link href={`/${team.city}`} className="inline-block py-2 text-xs text-faint hover:text-dim">
+        ← {findCity(team.city)?.name}
       </Link>
 
       <Hero

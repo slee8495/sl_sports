@@ -1,5 +1,5 @@
 /**
- * 내가 응원하는 팀들. **여기가 유일한 표다.**
+ * 내가 응원하는 팀들 — LA 열한 팀, 뉴욕 다섯 팀. **여기가 유일한 표다.**
  *
  * 팀을 더하거나 빼는 일이 여기 한 줄을 고치는 일이어야 한다 — 주소를 여러 곳에 흩어 놓으면
  * 언젠가 한쪽만 고쳐지고, 화면에는 있는데 안 가져와지는 팀이 생긴다.
@@ -75,6 +75,23 @@ export type NaverSource = {
 
 export type Source = EspnSource | SchoolSource | NaverSource;
 
+/**
+ * 첫 화면의 갈림길. 도시를 고르면 그 도시의 서가가 나온다.
+ *
+ * "LA" 는 지리가 아니라 **내 응원 묶음**이다 — 첼시·LG·수원도 여기 꽂혀 있다. 남부
+ * 캘리포니아에 살면서 따라온 팀들이 LA 고, 뉴욕은 뉴욕 팀만 따로 모은 묶음이다.
+ */
+export type CityKey = "la" | "ny";
+
+export const CITIES: { key: CityKey; name: string; fullName: string }[] = [
+  { key: "la", name: "LA", fullName: "Los Angeles" },
+  { key: "ny", name: "NY", fullName: "New York" },
+];
+
+export function findCity(key: string) {
+  return CITIES.find((c) => c.key === key) ?? null;
+}
+
 export type Team = {
   /** 주소에 쓰는 키. */
   slug: string;
@@ -87,7 +104,9 @@ export type Team = {
   league: string;
   level: Level;
   sport: string;
-  /** 홈 화면 서가를 나누는 기준. */
+  /** 첫 화면에서 고르는 도시. 서가는 도시마다 따로 선다. */
+  city: CityKey;
+  /** 도시 서가 안을 나누는 기준. */
   shelf: string;
   colors: {
     /** 서가의 책등 색. 이 팀을 '읽지 않고 아는' 색이다. */
@@ -122,6 +141,7 @@ export const TEAMS: Team[] = [
     level: "pro",
     sport: "Football",
     shelf: "Pro",
+    city: "la",
     colors: { primary: "#003594", secondary: "#FFD100", onPrimary: "#FFFFFF" },
     logo: "https://a.espncdn.com/i/teamlogos/nfl/500/lar.png",
     homeVenue: "SoFi Stadium",
@@ -138,6 +158,7 @@ export const TEAMS: Team[] = [
     level: "pro",
     sport: "Baseball",
     shelf: "Pro",
+    city: "la",
     colors: { primary: "#005A9C", secondary: "#EF3E42", onPrimary: "#FFFFFF" },
     logo: "https://a.espncdn.com/i/teamlogos/mlb/500/lad.png",
     homeVenue: "Dodger Stadium",
@@ -154,6 +175,7 @@ export const TEAMS: Team[] = [
     level: "pro",
     sport: "Basketball",
     shelf: "Pro",
+    city: "la",
     colors: { primary: "#1D428A", secondary: "#C8102E", onPrimary: "#FFFFFF" },
     logo: "https://a.espncdn.com/i/teamlogos/nba/500/lac.png",
     homeVenue: "Intuit Dome",
@@ -170,6 +192,7 @@ export const TEAMS: Team[] = [
     level: "pro",
     sport: "Hockey",
     shelf: "Pro",
+    city: "la",
     colors: { primary: "#FC4C02", secondary: "#B9975B", onPrimary: "#FFFFFF" },
     logo: "https://a.espncdn.com/i/teamlogos/nhl/500/ana.png",
     homeVenue: "Honda Center",
@@ -186,6 +209,7 @@ export const TEAMS: Team[] = [
     level: "pro",
     sport: "Soccer",
     shelf: "Pro",
+    city: "la",
     colors: { primary: "#000000", secondary: "#C39E6D", onPrimary: "#FFFFFF" },
     logo: "https://a.espncdn.com/i/teamlogos/soccer/500/18966.png",
     homeVenue: "BMO Stadium",
@@ -203,6 +227,7 @@ export const TEAMS: Team[] = [
     level: "pro",
     sport: "Soccer",
     shelf: "Pro",
+    city: "la",
     colors: { primary: "#034694", secondary: "#DBA111", onPrimary: "#FFFFFF" },
     logo: "https://a.espncdn.com/i/teamlogos/soccer/500/363.png",
     homeVenue: "Stamford Bridge",
@@ -220,6 +245,7 @@ export const TEAMS: Team[] = [
     level: "pro",
     sport: "Baseball",
     shelf: "Korea",
+    city: "la",
     colors: { primary: "#C30452", secondary: "#000000", onPrimary: "#FFFFFF" },
     logo: "https://sports-phinf.pstatic.net/team/kbo/default/LG.png",
     homeVenue: "Jamsil Baseball Stadium",
@@ -236,6 +262,7 @@ export const TEAMS: Team[] = [
     level: "pro",
     sport: "Soccer",
     shelf: "Korea",
+    city: "la",
     colors: { primary: "#1C3F94", secondary: "#E4002B", onPrimary: "#FFFFFF" },
     logo: "https://sports-phinf.pstatic.net/team/kleague/default/02.png",
     homeVenue: "Suwon World Cup Stadium",
@@ -253,6 +280,7 @@ export const TEAMS: Team[] = [
     level: "college",
     sport: "Football",
     shelf: "College",
+    city: "la",
     colors: { primary: "#990000", secondary: "#FFCC00", onPrimary: "#FFFFFF" },
     logo: "https://a.espncdn.com/i/teamlogos/ncaa/500/30.png",
     homeVenue: "Los Angeles Memorial Coliseum",
@@ -269,6 +297,7 @@ export const TEAMS: Team[] = [
     level: "college",
     sport: "Basketball",
     shelf: "College",
+    city: "la",
     colors: { primary: "#182B49", secondary: "#FFCD00", onPrimary: "#FFFFFF" },
     logo: "https://a.espncdn.com/i/teamlogos/ncaa/500/28.png",
     homeVenue: "LionTree Arena",
@@ -290,6 +319,7 @@ export const TEAMS: Team[] = [
     level: "hs",
     sport: "Football · Baseball",
     shelf: "High School",
+    city: "la",
     colors: { primary: "#CC0022", secondary: "#1B1B1B", onPrimary: "#FFFFFF" },
     logo: "/logos/orange-lutheran.webp",
     homeVenue: null,
@@ -311,19 +341,114 @@ export const TEAMS: Team[] = [
     },
     tagline: "Lancer Nation",
   },
+  {
+    slug: "yankees",
+    name: "New York Yankees",
+    shortName: "Yankees",
+    nickname: "Bronx Bombers",
+    league: "MLB",
+    level: "pro",
+    sport: "Baseball",
+    shelf: "Pro",
+    city: "ny",
+    colors: { primary: "#0C2340", secondary: "#C4CED4", onPrimary: "#FFFFFF" },
+    logo: "https://a.espncdn.com/i/teamlogos/mlb/500/nyy.png",
+    homeVenue: "Yankee Stadium",
+    ticketsUrl: "https://www.mlb.com/yankees/tickets",
+    source: { kind: "espn", path: "baseball/mlb", teamId: "10", standingsLevel: 3 },
+    tagline: "Pinstripe Pride",
+  },
+  {
+    slug: "nets",
+    name: "Brooklyn Nets",
+    shortName: "Nets",
+    nickname: "Nets",
+    league: "NBA",
+    level: "pro",
+    sport: "Basketball",
+    shelf: "Pro",
+    city: "ny",
+    colors: { primary: "#000000", secondary: "#777D84", onPrimary: "#FFFFFF" },
+    logo: "https://a.espncdn.com/i/teamlogos/nba/500/bkn.png",
+    // ESPN 의 팀 정보는 넷츠 구장을 "Prudential Center" 로 준다(2026-10-21). 틀린 값이다 —
+    // 경기 일정의 구장은 Barclays Center 로 맞게 온다.
+    homeVenue: "Barclays Center",
+    ticketsUrl: "https://www.nba.com/nets/tickets",
+    source: { kind: "espn", path: "basketball/nba", teamId: "17", standingsLevel: 3 },
+    tagline: "Brooklyn Grit",
+  },
+  {
+    slug: "islanders",
+    name: "New York Islanders",
+    shortName: "Islanders",
+    nickname: "Isles",
+    league: "NHL",
+    level: "pro",
+    sport: "Hockey",
+    shelf: "Pro",
+    city: "ny",
+    colors: { primary: "#00539B", secondary: "#F47D30", onPrimary: "#FFFFFF" },
+    logo: "https://a.espncdn.com/i/teamlogos/nhl/500/nyi.png",
+    homeVenue: "UBS Arena",
+    ticketsUrl: "https://www.nhl.com/islanders/tickets/",
+    source: { kind: "espn", path: "hockey/nhl", teamId: "12", standingsLevel: 3 },
+    tagline: "Yes! Yes! Yes!",
+  },
+  {
+    slug: "jets",
+    name: "New York Jets",
+    shortName: "Jets",
+    nickname: "Gang Green",
+    league: "NFL",
+    level: "pro",
+    sport: "Football",
+    shelf: "Pro",
+    city: "ny",
+    colors: { primary: "#125740", secondary: "#FFFFFF", onPrimary: "#FFFFFF" },
+    logo: "https://a.espncdn.com/i/teamlogos/nfl/500/nyj.png",
+    homeVenue: "MetLife Stadium",
+    ticketsUrl: "https://www.newyorkjets.com/tickets/single-game-tickets/",
+    source: { kind: "espn", path: "football/nfl", teamId: "20", standingsLevel: 3 },
+    tagline: "J-E-T-S Jets Jets Jets",
+  },
+  {
+    slug: "nycfc",
+    name: "New York City FC",
+    shortName: "NYCFC",
+    nickname: "Pigeons",
+    league: "MLS",
+    level: "pro",
+    sport: "Soccer",
+    shelf: "Pro",
+    city: "ny",
+    // 하늘색 위의 흰 글씨는 안 읽힌다. 글씨는 구단의 남색으로.
+    colors: { primary: "#6CACE4", secondary: "#041E42", onPrimary: "#041E42" },
+    logo: "https://a.espncdn.com/i/teamlogos/soccer/500/17606.png",
+    /*
+      **이사 예정.** 지금은 양키 스타디움을 빌려 쓰고(가끔 시티 필드), 퀸즈 윌레츠 포인트에
+      축구 전용 구장 Etihad Park 를 짓는 중이다 — 2027 시즌 개장 예정.
+      옮기는 날 이 한 줄만 고치면 된다. 일정 표의 경기별 구장은 ESPN 이 경기마다 주므로
+      저절로 바뀐다. ESPN 팀 정보에는 지금 구장이 비어 있다(2026-10-21).
+    */
+    homeVenue: "Yankee Stadium",
+    ticketsUrl: "https://www.newyorkcityfc.com/tickets/",
+    // 스탠딩 2 = 동부·서부 컨퍼런스(LAFC 와 같다).
+    source: { kind: "espn", path: "soccer/usa.1", teamId: "17606", standingsLevel: 2 },
+    tagline: "Our City",
+  },
 ];
 
 export function findTeam(slug: string): Team | null {
   return TEAMS.find((t) => t.slug === slug) ?? null;
 }
 
-/** 홈 화면의 서가 순서. 표에 없는 선반은 안 그린다. */
+/** 도시 서가의 선반 순서. 그 도시에 없는 선반은 안 그린다. */
 export const SHELVES = ["Pro", "Korea", "College", "High School"] as const;
 
-export function teamsByShelf(): { shelf: string; teams: Team[] }[] {
+export function teamsByShelf(city: CityKey): { shelf: string; teams: Team[] }[] {
   return SHELVES.map((shelf) => ({
     shelf,
-    teams: TEAMS.filter((t) => t.shelf === shelf),
+    teams: TEAMS.filter((t) => t.city === city && t.shelf === shelf),
   })).filter((s) => s.teams.length > 0);
 }
 
