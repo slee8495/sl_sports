@@ -1,5 +1,5 @@
 /**
- * 내가 응원하는 팀들 — LA 열한 팀, 뉴욕 다섯 팀. **여기가 유일한 표다.**
+ * 내가 응원하는 팀들 — LA 여덟, 뉴욕 다섯, 런던 하나, 한국 둘. **여기가 유일한 표다.**
  *
  * 팀을 더하거나 빼는 일이 여기 한 줄을 고치는 일이어야 한다 — 주소를 여러 곳에 흩어 놓으면
  * 언젠가 한쪽만 고쳐지고, 화면에는 있는데 안 가져와지는 팀이 생긴다.
@@ -78,14 +78,17 @@ export type Source = EspnSource | SchoolSource | NaverSource;
 /**
  * 첫 화면의 갈림길. 도시를 고르면 그 도시의 서가가 나온다.
  *
- * "LA" 는 지리가 아니라 **내 응원 묶음**이다 — 첼시·LG·수원도 여기 꽂혀 있다. 남부
- * 캘리포니아에 살면서 따라온 팀들이 LA 고, 뉴욕은 뉴욕 팀만 따로 모은 묶음이다.
+ * LA 에는 대학·고등학교도 같이 있다(USC·UCSD·오렌지 루터란 — 남부 캘리포니아).
+ * "Korea" 는 도시가 아니라 나라지만 LG(서울)와 수원을 한 칸에 둔다.
+ * 이름은 줄이지 않는다 — "LA" 가 아니라 "Los Angeles".
  */
-export type CityKey = "la" | "ny";
+export type CityKey = "la" | "ny" | "london" | "korea";
 
-export const CITIES: { key: CityKey; name: string; fullName: string }[] = [
-  { key: "la", name: "LA", fullName: "Los Angeles" },
-  { key: "ny", name: "NY", fullName: "New York" },
+export const CITIES: { key: CityKey; name: string }[] = [
+  { key: "la", name: "Los Angeles" },
+  { key: "ny", name: "New York" },
+  { key: "london", name: "London" },
+  { key: "korea", name: "Korea" },
 ];
 
 export function findCity(key: string) {
@@ -227,7 +230,7 @@ export const TEAMS: Team[] = [
     level: "pro",
     sport: "Soccer",
     shelf: "Pro",
-    city: "la",
+    city: "london",
     colors: { primary: "#034694", secondary: "#DBA111", onPrimary: "#FFFFFF" },
     logo: "https://a.espncdn.com/i/teamlogos/soccer/500/363.png",
     homeVenue: "Stamford Bridge",
@@ -244,8 +247,8 @@ export const TEAMS: Team[] = [
     league: "KBO",
     level: "pro",
     sport: "Baseball",
-    shelf: "Korea",
-    city: "la",
+    shelf: "Pro",
+    city: "korea",
     colors: { primary: "#C30452", secondary: "#000000", onPrimary: "#FFFFFF" },
     logo: "https://sports-phinf.pstatic.net/team/kbo/default/LG.png",
     homeVenue: "Jamsil Baseball Stadium",
@@ -261,8 +264,8 @@ export const TEAMS: Team[] = [
     league: "K League 2",
     level: "pro",
     sport: "Soccer",
-    shelf: "Korea",
-    city: "la",
+    shelf: "Pro",
+    city: "korea",
     colors: { primary: "#1C3F94", secondary: "#E4002B", onPrimary: "#FFFFFF" },
     logo: "https://sports-phinf.pstatic.net/team/kleague/default/02.png",
     homeVenue: "Suwon World Cup Stadium",
@@ -443,7 +446,7 @@ export function findTeam(slug: string): Team | null {
 }
 
 /** 도시 서가의 선반 순서. 그 도시에 없는 선반은 안 그린다. */
-export const SHELVES = ["Pro", "Korea", "College", "High School"] as const;
+export const SHELVES = ["Pro", "College", "High School"] as const;
 
 export function teamsByShelf(city: CityKey): { shelf: string; teams: Team[] }[] {
   return SHELVES.map((shelf) => ({

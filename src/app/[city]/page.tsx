@@ -50,7 +50,7 @@ export default async function Library({ params }: { params: Promise<{ city: stri
 
       <header className="pt-2 pb-7">
         <p className="text-xs tracking-wide text-faint">
-          <span className="font-semibold text-dim">{city.fullName}</span> · {todayLabel()}
+          <span className="font-semibold text-dim">{city.name}</span> · {todayLabel()}
         </p>
         {top ? <Headline card={top.card} live={top.live} /> : (
           <p className="mt-3 text-sm text-dim">Nothing scheduled. Every team is between seasons.</p>

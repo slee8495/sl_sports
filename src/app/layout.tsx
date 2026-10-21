@@ -16,7 +16,7 @@ const archivo = Archivo({
 
 export const metadata: Metadata = {
   title: "SL Sports",
-  description: "Two cities, sixteen teams. Next game, roster, standings — no guessing.",
+  description: "Four cities, sixteen teams. Next game, roster, standings — no guessing.",
   appleWebApp: {
     capable: true,
     title: "SL Sports",
