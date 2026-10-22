@@ -3,8 +3,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getShelfCard, type ShelfCard } from "@/lib/sources";
 import { CITIES, findCity, teamsByShelf } from "@/lib/sources/teams";
-import type { Game } from "@/lib/sources/types";
-import { dayLabel, gameLabel, isToday, relative, timeLabel, todayLabel } from "@/lib/format";
+import { dayLabel, isToday, todayLabel } from "@/lib/format";
 import { LiveDot, matchup, scoreline } from "@/components/Bits";
 
 /*
@@ -23,26 +22,6 @@ export async function generateMetadata({ params }: { params: Promise<{ city: str
   return { title: city ? `${city.name} · SL Sports` : "SL Sports" };
 }
 
-/** 도시 서가 맨 위에 늘어놓는 앞으로의 경기 수. */
-const UP_NEXT = 5;
-
-type Slot = { card: ShelfCard; game: Game };
-
-/**
- * 맨 위 두 줄 묶음 — 지금 하는 경기 전부, 그리고 이 도시 팀들의 다음 다섯 경기.
- *
- * 다섯은 팀을 가리지 않고 시각 순이다. 클리퍼스가 램스보다 먼저 두 번 뛰면 두 번 다 적는다 —
- * "다음에 뭘 볼 수 있나" 를 묻는 자리지, 팀마다 한 줄씩 나눠 주는 자리가 아니다.
- */
-function slate(cards: ShelfCard[]): { live: Slot[]; next: Slot[] } {
-  const live = cards.filter((c) => c.live).map((c) => ({ card: c, game: c.live! }));
-  const next = cards
-    .flatMap((c) => c.upcoming.filter((g) => g.startsAt).map((game) => ({ card: c, game })))
-    .sort((a, b) => a.game.startsAt!.localeCompare(b.game.startsAt!))
-    .slice(0, UP_NEXT);
-  return { live, next };
-}
-
 export default async function Library({ params }: { params: Promise<{ city: string }> }) {
   const city = findCity((await params).city);
   if (!city) notFound();
@@ -50,7 +29,6 @@ export default async function Library({ params }: { params: Promise<{ city: stri
   const shelves = teamsByShelf(city.key);
   const cards = await Promise.all(shelves.flatMap((s) => s.teams).map(getShelfCard));
   const bySlug = new Map(cards.map((c) => [c.team.slug, c]));
-  const top = slate(cards);
 
   return (
     <main>
@@ -58,17 +36,10 @@ export default async function Library({ params }: { params: Promise<{ city: stri
         ← Cities
       </Link>
 
-      <header className="pt-2 pb-7">
+      <header className="pt-2 pb-6">
         <p className="text-xs tracking-wide text-faint">
           <span className="font-semibold text-dim">{city.name}</span> · {todayLabel()}
         </p>
-        {top.live.length > 0 && (
-          <SlateList title={<><LiveDot /> Live now</>} slots={top.live} live />
-        )}
-        {top.next.length > 0 && <SlateList title="Up next" slots={top.next} />}
-        {top.live.length === 0 && top.next.length === 0 && (
-          <p className="mt-3 text-sm text-dim">Nothing scheduled. Every team is between seasons.</p>
-        )}
       </header>
 
       {shelves.map(({ shelf, teams }) => (
@@ -90,54 +61,6 @@ export default async function Library({ params }: { params: Promise<{ city: stri
         </section>
       ))}
     </main>
-  );
-}
-
-function SlateList({ title, slots, live }: { title: React.ReactNode; slots: Slot[]; live?: boolean }) {
-  return (
-    <section className="mt-5">
-      <h2 className="mb-1 flex items-center gap-2 text-[11px] font-semibold tracking-wide text-faint uppercase">
-        {title}
-      </h2>
-      <ul className="divide-y divide-edge">
-        {slots.map(({ card, game }) => (
-          <li key={`${card.team.slug}-${game.id}`}>
-            <SlateRow card={card} game={game} live={live} />
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
-
-function SlateRow({ card, game, live }: Slot & { live?: boolean }) {
-  const score = scoreline(game);
-  return (
-    <Link href={`/team/${card.team.slug}`} className="group flex items-center gap-3 py-2.5">
-      <span
-        className="h-9 w-9 shrink-0 rounded-[3px] p-1.5"
-        style={{ background: `${card.team.colors.primary}14` }}
-      >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={card.snapshot.logo ?? card.team.logo} alt="" className="h-full w-full object-contain" />
-      </span>
-
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-[15px] font-semibold leading-tight group-hover:underline">
-          {card.team.shortName} <span className="font-normal text-dim">{matchup(game)}</span>
-        </p>
-        <p className="mt-0.5 truncate text-xs text-dim tnum">
-          {live
-            ? [game.statusDetail ?? "In progress", game.venue].filter(Boolean).join(" · ")
-            : [
-                isToday(game.startsAt) ? (game.timeTbd ? "Today · time TBD" : `Today · ${timeLabel(game.startsAt)}`) : gameLabel(game.startsAt, game.timeTbd),
-                relative(game.startsAt),
-              ].join(" · ")}
-        </p>
-      </div>
-
-      {live && score && <span className="shrink-0 text-[15px] font-semibold tnum">{score}</span>}
-    </Link>
   );
 }
 

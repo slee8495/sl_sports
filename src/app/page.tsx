@@ -1,22 +1,27 @@
 import Link from "next/link";
+import { getShelfCard } from "@/lib/sources";
 import { CITIES, TEAMS } from "@/lib/sources/teams";
 import { todayLabel } from "@/lib/format";
+import { Slate } from "@/components/Slate";
 
-// 날짜 한 줄 때문에 매번 그린다. 구워 두면 배포한 날에 멈춘다.
+// "in 2h" 같은 글자 때문에 매번 그린다. 바깥 요청은 fetch 캐시가 막아 준다.
 export const dynamic = "force-dynamic";
 
 /*
   **첫 화면은 갈림길이다.** LA·뉴욕·런던·한국 중 하나를 고르면 그 도시의 서가가 나온다.
 
-  여기서는 아무것도 부르지 않는다 — 표에 적힌 로고만 늘어놓는다. 경기 정보는 도시를
-  고른 뒤에 읽는다. 열여섯 팀을 다 읽고 나서야 네 칸짜리 갈림길이 뜨면 느리기만 하다.
+  그 위에 모든 도시를 합친 "지금 하는 경기" 와 "다음 다섯 경기" 를 둔다. 그래서 여기서도
+  열여섯 팀을 다 읽는다 — 서가 표지와 같은 값(`getShelfCard`)이라 캐시를 같이 쓴다.
 */
-export default function Cities() {
+export default async function Cities() {
+  const cards = await Promise.all(TEAMS.map(getShelfCard));
+
   return (
     <main>
       <header className="pt-2 pb-7">
         <p className="text-xs tracking-wide text-faint">{todayLabel()}</p>
         <h1 className="mt-2 text-[22px] leading-tight font-semibold">SL Sports</h1>
+        <Slate cards={cards} />
       </header>
 
       <div className="grid gap-4 sm:grid-cols-2">
