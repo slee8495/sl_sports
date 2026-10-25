@@ -1,6 +1,6 @@
 # SL Sports
 
-내가 응원하는 열여섯 팀을 한 화면에. 첫 화면에서 **Los Angeles**·**New York**·**London**·**Korea** 중 하나를 고르면 그 도시의
+내가 응원하는 열여섯 팀을 한 화면에. 첫 화면에서 **Los Angeles**·**Boston**·**London**·**Korea** 중 하나를 고르면 그 도시의
 팀 로고가 꽂힌 **서가**가 나오고, 표지를 고르면 그 팀의 다음 경기·일정·로스터·순위표·부상자·
 뉴스가 나온다.
 
@@ -16,22 +16,19 @@
 | LA Clippers | NBA | ESPN |
 | Anaheim Ducks | NHL | ESPN |
 | Los Angeles FC | MLS | ESPN |
-| USC Trojans | Big Ten 풋볼 | ESPN |
 | UC San Diego Tritons | Big West 농구 | ESPN |
 | Orange Lutheran Lancers | Trinity League 풋볼·야구 | 학교 공식 캘린더 + MaxPreps |
 
-**New York**
+**Boston**
 
 | 팀 | 리그 | 출처 |
 | --- | --- | --- |
-| New York Yankees | MLB | ESPN |
-| Brooklyn Nets | NBA | ESPN |
-| New York Islanders | NHL | ESPN |
-| New York Jets | NFL | ESPN |
-| New York City FC | MLS | ESPN |
-
-NYCFC 는 지금 양키 스타디움을 빌려 쓴다. 퀸즈의 Etihad Park(2027 시즌 개장 예정)로 옮기면
-`teams.ts` 의 `homeVenue` 한 줄을 고친다 — 경기별 구장은 ESPN 이 주므로 저절로 바뀐다.
+| Boston Red Sox | MLB | ESPN |
+| Boston Celtics | NBA | ESPN |
+| Boston Bruins | NHL | ESPN |
+| New England Patriots | NFL | ESPN |
+| New England Revolution | MLS | ESPN |
+| Harvard Crimson | Ivy League 풋볼 (FCS) | ESPN |
 
 **London**
 
@@ -86,7 +83,7 @@ src/lib/sources/
   index.ts     화면이 부르는 창구. 어느 출처인지는 여기서 갈리고 여기서 끝난다.
   split.ts     일정을 다음 경기·다음 홈경기·최근 경기로 가르는 셈(바깥을 안 부른다)
 src/app/
-  page.tsx           도시 고르기 (Los Angeles · New York · London · Korea)
+  page.tsx           도시 고르기 (Los Angeles · Boston · London · Korea)
   [city]/            도시 서가
   team/[slug]/       팀 화면 (Now · Schedule · Roster · Standings · News)
 ```

@@ -537,7 +537,7 @@ export async function espnStandings(src: EspnSource): Promise<Fetched<StandingsG
   };
 
   const json = await read<Node>(
-    `${SITE_V2}/${src.path}/standings?level=${src.standingsLevel}`,
+    `${SITE_V2}/${src.path}/standings?level=${src.standingsLevel}${src.standingsGroup ? `&group=${src.standingsGroup}` : ""}`,
     TTL.standings,
   );
   if (!json) return null;

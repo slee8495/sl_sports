@@ -1,5 +1,5 @@
 /**
- * 내가 응원하는 팀들 — LA 여덟, 뉴욕 다섯, 런던 하나, 한국 둘. **여기가 유일한 표다.**
+ * 내가 응원하는 팀들 — LA 일곱, 보스턴 여섯, 런던 하나, 한국 둘. **여기가 유일한 표다.**
  *
  * 팀을 더하거나 빼는 일이 여기 한 줄을 고치는 일이어야 한다 — 주소를 여러 곳에 흩어 놓으면
  * 언젠가 한쪽만 고쳐지고, 화면에는 있는데 안 가져와지는 팀이 생긴다.
@@ -30,6 +30,8 @@ export type EspnSource = {
    * NFL 은 디비전(3)이 뜻이 있고, 대학은 컨퍼런스(2)가 그 자리다.
    */
   standingsLevel: number;
+  /** 스탠딩의 `group=`. 대학 풋볼은 안 주면 FBS 만 온다 — FCS 팀은 "81". */
+  standingsGroup?: string;
 };
 
 /**
@@ -78,15 +80,15 @@ export type Source = EspnSource | SchoolSource | NaverSource;
 /**
  * 첫 화면의 갈림길. 도시를 고르면 그 도시의 서가가 나온다.
  *
- * LA 에는 대학·고등학교도 같이 있다(USC·UCSD·오렌지 루터란 — 남부 캘리포니아).
+ * LA 에는 대학·고등학교도 같이 있다(UCSD·오렌지 루터란 — 남부 캘리포니아). 보스턴에는 하버드.
  * "Korea" 는 도시가 아니라 나라지만 LG(서울)와 수원을 한 칸에 둔다.
  * 이름은 줄이지 않는다 — "LA" 가 아니라 "Los Angeles".
  */
-export type CityKey = "la" | "ny" | "london" | "korea";
+export type CityKey = "la" | "boston" | "london" | "korea";
 
 export const CITIES: { key: CityKey; name: string }[] = [
   { key: "la", name: "Los Angeles" },
-  { key: "ny", name: "New York" },
+  { key: "boston", name: "Boston" },
   { key: "london", name: "London" },
   { key: "korea", name: "Korea" },
 ];
@@ -126,7 +128,7 @@ export type Team = {
    *
    * 경기별 링크를 쓰지 않는 이유: ESPN 은 오늘 경기에만 티켓 링크를 주고, 그 링크는
    * 재판매 사이트다. 구단 공식 페이지 한 줄이 늘 살아 있고, 날짜는 거기서 고르면 된다.
-   * 확인한 값이고(2026-09-18 전부 200, USC·LAFC·첼시·LG·수원은 2026-10-17), 리다이렉트도 제대로 따라간다.
+   * 확인한 값이고(2026-09-18 전부 200, LAFC·첼시·LG·수원은 2026-10-17, 보스턴 여섯은 2026-10-24), 리다이렉트도 제대로 따라간다.
    */
   ticketsUrl: string | null;
   source: Source;
@@ -275,23 +277,6 @@ export const TEAMS: Team[] = [
     tagline: "Pride of Suwon",
   },
   {
-    slug: "trojans",
-    name: "USC Trojans",
-    shortName: "USC",
-    nickname: "Trojans",
-    league: "Big Ten · NCAA Football",
-    level: "college",
-    sport: "Football",
-    shelf: "College",
-    city: "la",
-    colors: { primary: "#990000", secondary: "#FFCC00", onPrimary: "#FFFFFF" },
-    logo: "https://a.espncdn.com/i/teamlogos/ncaa/500/30.png",
-    homeVenue: "Los Angeles Memorial Coliseum",
-    ticketsUrl: "https://usctrojans.com/tickets",
-    source: { kind: "espn", path: "football/college-football", teamId: "30", standingsLevel: 2 },
-    tagline: "Fight On",
-  },
-  {
     slug: "tritons",
     name: "UC San Diego Tritons",
     shortName: "UCSD",
@@ -345,99 +330,114 @@ export const TEAMS: Team[] = [
     tagline: "Lancer Nation",
   },
   {
-    slug: "yankees",
-    name: "New York Yankees",
-    shortName: "Yankees",
-    nickname: "Bronx Bombers",
+    slug: "red-sox",
+    name: "Boston Red Sox",
+    shortName: "Red Sox",
+    nickname: "Sox",
     league: "MLB",
     level: "pro",
     sport: "Baseball",
     shelf: "Pro",
-    city: "ny",
-    colors: { primary: "#0C2340", secondary: "#C4CED4", onPrimary: "#FFFFFF" },
-    logo: "https://a.espncdn.com/i/teamlogos/mlb/500/nyy.png",
-    homeVenue: "Yankee Stadium",
-    ticketsUrl: "https://www.mlb.com/yankees/tickets",
-    source: { kind: "espn", path: "baseball/mlb", teamId: "10", standingsLevel: 3 },
-    tagline: "Pinstripe Pride",
+    city: "boston",
+    colors: { primary: "#0C2340", secondary: "#BD3039", onPrimary: "#FFFFFF" },
+    logo: "https://a.espncdn.com/i/teamlogos/mlb/500/bos.png",
+    homeVenue: "Fenway Park",
+    ticketsUrl: "https://www.mlb.com/redsox/tickets",
+    source: { kind: "espn", path: "baseball/mlb", teamId: "2", standingsLevel: 3 },
+    tagline: "Dirt Dogs",
   },
   {
-    slug: "nets",
-    name: "Brooklyn Nets",
-    shortName: "Nets",
-    nickname: "Nets",
+    slug: "celtics",
+    name: "Boston Celtics",
+    shortName: "Celtics",
+    nickname: "C's",
     league: "NBA",
     level: "pro",
     sport: "Basketball",
     shelf: "Pro",
-    city: "ny",
-    colors: { primary: "#000000", secondary: "#777D84", onPrimary: "#FFFFFF" },
-    logo: "https://a.espncdn.com/i/teamlogos/nba/500/bkn.png",
-    // ESPN 의 팀 정보는 넷츠 구장을 "Prudential Center" 로 준다(2026-10-21). 틀린 값이다 —
-    // 경기 일정의 구장은 Barclays Center 로 맞게 온다.
-    homeVenue: "Barclays Center",
-    ticketsUrl: "https://www.nba.com/nets/tickets",
-    source: { kind: "espn", path: "basketball/nba", teamId: "17", standingsLevel: 3 },
-    tagline: "Brooklyn Grit",
+    city: "boston",
+    colors: { primary: "#007A33", secondary: "#BA9653", onPrimary: "#FFFFFF" },
+    logo: "https://a.espncdn.com/i/teamlogos/nba/500/bos.png",
+    homeVenue: "TD Garden",
+    ticketsUrl: "https://www.nba.com/celtics/tickets",
+    source: { kind: "espn", path: "basketball/nba", teamId: "2", standingsLevel: 3 },
+    tagline: "Bleed Green",
   },
   {
-    slug: "islanders",
-    name: "New York Islanders",
-    shortName: "Islanders",
-    nickname: "Isles",
+    slug: "bruins",
+    name: "Boston Bruins",
+    shortName: "Bruins",
+    nickname: "B's",
     league: "NHL",
     level: "pro",
     sport: "Hockey",
     shelf: "Pro",
-    city: "ny",
-    colors: { primary: "#00539B", secondary: "#F47D30", onPrimary: "#FFFFFF" },
-    logo: "https://a.espncdn.com/i/teamlogos/nhl/500/nyi.png",
-    homeVenue: "UBS Arena",
-    ticketsUrl: "https://www.nhl.com/islanders/tickets/",
-    source: { kind: "espn", path: "hockey/nhl", teamId: "12", standingsLevel: 3 },
-    tagline: "Yes! Yes! Yes!",
+    city: "boston",
+    colors: { primary: "#000000", secondary: "#FFB81C", onPrimary: "#FFFFFF" },
+    logo: "https://a.espncdn.com/i/teamlogos/nhl/500/bos.png",
+    homeVenue: "TD Garden",
+    ticketsUrl: "https://www.nhl.com/bruins/tickets/",
+    source: { kind: "espn", path: "hockey/nhl", teamId: "1", standingsLevel: 3 },
+    tagline: "Never Quit",
   },
   {
-    slug: "jets",
-    name: "New York Jets",
-    shortName: "Jets",
-    nickname: "Gang Green",
+    slug: "patriots",
+    name: "New England Patriots",
+    shortName: "Patriots",
+    nickname: "Pats",
     league: "NFL",
     level: "pro",
     sport: "Football",
     shelf: "Pro",
-    city: "ny",
-    colors: { primary: "#125740", secondary: "#FFFFFF", onPrimary: "#FFFFFF" },
-    logo: "https://a.espncdn.com/i/teamlogos/nfl/500/nyj.png",
-    homeVenue: "MetLife Stadium",
-    ticketsUrl: "https://www.newyorkjets.com/tickets/single-game-tickets/",
-    source: { kind: "espn", path: "football/nfl", teamId: "20", standingsLevel: 3 },
-    tagline: "J-E-T-S Jets Jets Jets",
+    city: "boston",
+    colors: { primary: "#002244", secondary: "#C60C30", onPrimary: "#FFFFFF" },
+    logo: "https://a.espncdn.com/i/teamlogos/nfl/500/ne.png",
+    homeVenue: "Gillette Stadium",
+    ticketsUrl: "https://www.patriots.com/tickets/",
+    source: { kind: "espn", path: "football/nfl", teamId: "17", standingsLevel: 3 },
+    tagline: "Do Your Job",
   },
   {
-    slug: "nycfc",
-    name: "New York City FC",
-    shortName: "NYCFC",
-    nickname: "Pigeons",
+    slug: "revolution",
+    name: "New England Revolution",
+    shortName: "Revolution",
+    nickname: "Revs",
     league: "MLS",
     level: "pro",
     sport: "Soccer",
     shelf: "Pro",
-    city: "ny",
-    // 하늘색 위의 흰 글씨는 안 읽힌다. 글씨는 구단의 남색으로.
-    colors: { primary: "#6CACE4", secondary: "#041E42", onPrimary: "#041E42" },
-    logo: "https://a.espncdn.com/i/teamlogos/soccer/500/17606.png",
-    /*
-      **이사 예정.** 지금은 양키 스타디움을 빌려 쓰고(가끔 시티 필드), 퀸즈 윌레츠 포인트에
-      축구 전용 구장 Etihad Park 를 짓는 중이다 — 2027 시즌 개장 예정.
-      옮기는 날 이 한 줄만 고치면 된다. 일정 표의 경기별 구장은 ESPN 이 경기마다 주므로
-      저절로 바뀐다. ESPN 팀 정보에는 지금 구장이 비어 있다(2026-10-21).
-    */
-    homeVenue: "Yankee Stadium",
-    ticketsUrl: "https://www.newyorkcityfc.com/tickets/",
+    city: "boston",
+    colors: { primary: "#0A2240", secondary: "#CE0E2D", onPrimary: "#FFFFFF" },
+    logo: "https://a.espncdn.com/i/teamlogos/soccer/500/189.png",
+    homeVenue: "Gillette Stadium",
+    ticketsUrl: "https://www.revolutionsoccer.net/tickets/",
     // 스탠딩 2 = 동부·서부 컨퍼런스(LAFC 와 같다).
-    source: { kind: "espn", path: "soccer/usa.1", teamId: "17606", standingsLevel: 2 },
-    tagline: "Our City",
+    source: { kind: "espn", path: "soccer/usa.1", teamId: "189", standingsLevel: 2 },
+    tagline: "Defend New England",
+  },
+  {
+    slug: "harvard",
+    name: "Harvard Crimson",
+    shortName: "Harvard",
+    nickname: "Crimson",
+    league: "Ivy League · NCAA Football",
+    level: "college",
+    sport: "Football",
+    shelf: "College",
+    city: "boston",
+    colors: { primary: "#A51C30", secondary: "#1E1E1E", onPrimary: "#FFFFFF" },
+    logo: "https://a.espncdn.com/i/teamlogos/ncaa/500/108.png",
+    homeVenue: "Harvard Stadium",
+    ticketsUrl: "https://gocrimson.com/tickets",
+    // 아이비리그는 FCS 다. 그룹을 안 주면 ESPN 은 FBS 표만 준다 — 81 이 FCS.
+    source: {
+      kind: "espn",
+      path: "football/college-football",
+      teamId: "108",
+      standingsLevel: 2,
+      standingsGroup: "81",
+    },
+    tagline: "Go Crimson",
   },
 ];
 
