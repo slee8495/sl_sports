@@ -6,7 +6,7 @@
  */
 
 import type { Game } from "./sources/types";
-import { slashDate } from "./format";
+import { monthDay, slashDate } from "./format";
 
 /** 유튜브 제목이 대개 "Giants vs. Dodgers Game Highlights (9/17/26)" 라서 그 모양에 맞춘다. */
 export function highlightQuery(us: string, game: Game): string {
@@ -29,12 +29,40 @@ export function searchUrl(query: string): string {
  *   ("ORANGE LUTHERAN SHUTS DOWN SERRA"). 두 이름이 다 들어 있으면 그 경기가 맞다.
  *
  * 둘 다 아니면 **모른다고 한다.** 엉뚱한 경기를 이 경기라고 내놓는 것이 제일 나쁘다.
+ *
+ * **제목에 날짜가 있으면 그 날짜도 맞아야 한다.** 같은 두 팀은 한 시즌에 여러 번 붙는다 —
+ * 10월 20일 LG-KIA 경기에 "Twins vs Tigers｜10.12" 영상이 걸렸다. 이름만 보면 맞는 영상이다.
+ * 날짜는 하루 앞뒤까지 받는다 — 한국 경기는 태평양 날짜로 하루 전이다.
+ *
+ * **쿼터·하프 조각은 안 받는다.** 막 끝난 경기는 "Full 1st Qtr Highlights" 가 먼저 올라와 있고,
+ * 한 번 걸리면 반나절 캐시에 묶인다. 차라리 검색으로 보내면 경기 전체 영상이 올라온 뒤에 찾는다.
  */
-export function titleFits(title: string, us: string[], them: string[]): boolean {
+export function titleFits(title: string, us: string[], them: string[], startsAt?: string | null): boolean {
   const lower = title.toLowerCase();
   const has = (list: string[]) => list.some((t) => t.length > 2 && lower.includes(t.toLowerCase()));
-  if (lower.includes("highlight") && (has(us) || has(them))) return true;
-  return has(us) && has(them);
+  if (!(lower.includes("highlight") && (has(us) || has(them))) && !(has(us) && has(them))) return false;
+  if (/\b(1st|2nd|3rd|4th|first|second|third|fourth)\s+(qtr|quarter|half|period)\b/i.test(title)) return false;
+
+  const said = titleDates(title);
+  const at = startsAt ? Date.parse(startsAt) : NaN;
+  if (said.length === 0 || Number.isNaN(at)) return true;
+  const day = 86_400_000;
+  const near = [at - day, at, at + day].map((t) => monthDay(new Date(t)));
+  return said.some((d) => near.includes(d));
+}
+
+const MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+
+/** 제목 안의 날짜들을 "10/20" 모양으로 — "10/20/26", "10.12", "October 21, 2026", "10월 12일". */
+function titleDates(title: string): string[] {
+  const out: string[] = [];
+  const md = (m: string, d: string) => out.push(`${Number(m)}/${Number(d)}`);
+  for (const m of title.matchAll(/(?<!\d)(1[0-2]|0?[1-9])[/.](3[01]|[12]\d|0?[1-9])(?!\d)/g)) md(m[1], m[2]);
+  for (const m of title.matchAll(/(1[0-2]|[1-9])월\s*(3[01]|[12]\d|[1-9])일/g)) md(m[1], m[2]);
+  for (const m of title.matchAll(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+(3[01]|[12]\d|0?[1-9])(?!\d)/gi)) {
+    md(String(MONTHS.indexOf(m[1].toLowerCase()) + 1), m[2]);
+  }
+  return out;
 }
 
 /**

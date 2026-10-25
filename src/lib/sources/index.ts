@@ -302,6 +302,8 @@ export type ShelfCard = {
    * 다시 다섯을 고른다 — 한 팀이 그 다섯을 다 차지할 수도 있으니 팀마다 다섯은 들고 온다.
    */
   upcoming: Game[];
+  /** 끝난 경기, 최근 것부터 다섯까지. 첫 화면의 "Recent" 가 팀들 것을 모아 다시 다섯을 고른다. */
+  recent: Game[];
   /** 일정을 아예 못 가져왔다. 화면이 "경기 없음" 이 아니라 그렇게 적는다. */
   scheduleFailed: boolean;
 };
@@ -316,7 +318,7 @@ export async function getShelfCard(team: Team): Promise<ShelfCard> {
   const programs = await getPrograms(team);
   if (programs === null) {
     const snapshot = fallbackSnapshot(team);
-    return { team, snapshot, record: null, next: null, live: null, last: null, upcoming: [], scheduleFailed: true };
+    return { team, snapshot, record: null, next: null, live: null, last: null, upcoming: [], recent: [], scheduleFailed: true };
   }
 
   const active = defaultProgram(programs);
@@ -331,6 +333,7 @@ export async function getShelfCard(team: Team): Promise<ShelfCard> {
     live: split.live,
     last: split.last,
     upcoming: split.upcoming.slice(0, 5),
+    recent: split.finished.slice(-5).reverse(),
     scheduleFailed: false,
   };
 }

@@ -33,7 +33,7 @@ type Found = { videoId: string; title: string };
  * 한다 — 안 그러면 엉뚱한 경기의 하이라이트나 하이라이트도 아닌 영상을 "이 경기" 라고
  * 내놓게 된다. 확신이 없으면 null 이고, 화면은 검색 주소로 돌아간다.
  */
-async function search(query: string, us: string[], them: string[]): Promise<Fetched<Found>> {
+async function search(query: string, us: string[], them: string[], startsAt: string | null): Promise<Fetched<Found>> {
   let html: string;
   try {
     const res = await fetch(searchUrl(query), {
@@ -57,7 +57,7 @@ async function search(query: string, us: string[], them: string[]): Promise<Fetc
   const [, videoId, rawTitle] = m;
   const title = rawTitle.replace(/\\u0026/g, "&").replace(/\\"/g, '"');
 
-  if (!titleFits(title, us, them)) return null;
+  if (!titleFits(title, us, them, startsAt)) return null;
   return { videoId, title };
 }
 
@@ -71,8 +71,14 @@ export type Highlight = { url: string; title: string | null; exact: boolean };
  * 영상을 찾았으면 그 영상으로, 못 찾았으면 검색 결과로. **어느 쪽이든 링크는 나온다** —
  * 버튼이 있는데 아무 데도 안 가는 경우를 만들지 않는다.
  */
-export async function findHighlight(query: string, us: string[], them: string[]): Promise<Highlight> {
-  const found = await cached(query, us, them);
+export async function findHighlight(
+  query: string,
+  us: string[],
+  them: string[],
+  /** 경기 시각. 제목에 다른 날짜가 적힌 영상(같은 두 팀의 다른 경기)을 거른다. */
+  startsAt: string | null,
+): Promise<Highlight> {
+  const found = await cached(query, us, them, startsAt);
   if (!found) return { url: searchUrl(query), title: null, exact: false };
   return { url: `https://www.youtube.com/watch?v=${found.videoId}`, title: found.title, exact: true };
 }

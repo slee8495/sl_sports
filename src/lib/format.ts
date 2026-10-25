@@ -47,6 +47,11 @@ export function slashDate(value: string | Date | null): string {
   return fmt(value, { month: "numeric", day: "numeric", year: "2-digit" });
 }
 
+/** "10/20" — 하이라이트 제목의 날짜와 견줄 때 쓰는 모양. 앞자리 0 이 없다. */
+export function monthDay(value: string | Date | null): string {
+  return fmt(value, { month: "numeric", day: "numeric" });
+}
+
 export function yearOf(value: string | Date | null): string {
   return fmt(value, { year: "numeric" });
 }

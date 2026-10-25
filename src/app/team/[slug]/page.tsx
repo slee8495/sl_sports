@@ -53,6 +53,7 @@ export default async function TeamPage({ params }: { params: Promise<{ slug: str
         query,
         nameTokens(team.name, team.shortName, team.nickname),
         nameTokens(last.opponent.name, last.opponent.shortName),
+        last.startsAt,
       );
     }),
   );
