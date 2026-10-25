@@ -115,6 +115,7 @@ export function GameRow({
   accent,
   ticketsUrl,
   teamName,
+  sport,
 }: {
   game: Game;
   accent: string;
@@ -122,6 +123,8 @@ export function GameRow({
   ticketsUrl?: string | null;
   /** 하이라이트를 찾을 때 쓰는 우리 팀 이름. 끝난 경기에만 쓴다. */
   teamName?: string;
+  /** 검색에 붙일 종목(`querySport`). 학교 팀에만 있다. */
+  sport?: string | null;
 }) {
   const done = game.status === "final";
   const live = game.status === "in";
@@ -167,7 +170,7 @@ export function GameRow({
           */}
           {done && teamName && (
             <a
-              href={searchUrl(highlightQuery(teamName, game))}
+              href={searchUrl(highlightQuery(teamName, game, sport))}
               target="_blank"
               rel="noreferrer"
               onClick={(e) => e.stopPropagation()}

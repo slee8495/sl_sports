@@ -4,7 +4,7 @@ import { findTeam, TEAMS } from "@/lib/sources/teams";
 import { getLive, getNews, getPrograms } from "@/lib/sources";
 import { splitSchedule } from "@/lib/sources/split";
 import { findHighlight, type Highlight } from "@/lib/sources/youtube";
-import { highlightQuery, nameTokens } from "@/lib/highlight";
+import { highlightQuery, nameTokens, querySport } from "@/lib/highlight";
 import { TeamView } from "./TeamView";
 
 export const dynamic = "force-dynamic";
@@ -48,12 +48,13 @@ export default async function TeamPage({ params }: { params: Promise<{ slug: str
     (programs ?? []).map(async (p) => {
       const last = splitSchedule(p.games).last;
       if (!last) return;
-      const query = highlightQuery(team.shortName, last);
+      const query = highlightQuery(team.shortName, last, querySport(team, p.label));
       highlights[p.key] = await findHighlight(
         query,
         nameTokens(team.name, team.shortName, team.nickname),
         nameTokens(last.opponent.name, last.opponent.shortName),
         last.startsAt,
+        p.label,
       );
     }),
   );

@@ -8,11 +8,52 @@
 import type { Game } from "./sources/types";
 import { monthDay, slashDate } from "./format";
 
-/** 유튜브 제목이 대개 "Giants vs. Dodgers Game Highlights (9/17/26)" 라서 그 모양에 맞춘다. */
-export function highlightQuery(us: string, game: Game): string {
+/**
+ * 유튜브 제목이 대개 "Giants vs. Dodgers Game Highlights (9/17/26)" 라서 그 모양에 맞춘다.
+ *
+ * `sport` 는 학교 팀에만 붙인다(`querySport`). "Harvard Princeton highlights" 로 찾았더니
+ * 같은 두 학교의 **라크로스** 하이라이트가 첫 영상이었다 — 학교 이름은 종목을 안 가린다.
+ */
+export function highlightQuery(us: string, game: Game, sport?: string | null): string {
   const them = game.opponent.shortName ?? game.opponent.name;
   const when = slashDate(game.startsAt);
-  return [us, them, "highlights", when].filter(Boolean).join(" ");
+  return [us, them, sport, "highlights", when].filter(Boolean).join(" ");
+}
+
+/**
+ * 검색에 붙일 종목. 프로 팀 이름은 이미 종목이 하나라 안 붙인다 — 잘 찾던 검색을 건드리지 않는다.
+ * 종목이 둘인 팀("Football · Baseball")은 어느 쪽인지 모르니 안 붙인다.
+ */
+export function querySport(team: { level: string; sport: string }, label?: string): string | null {
+  const sport = label ?? team.sport;
+  return team.level !== "pro" && !sport.includes("·") ? sport : null;
+}
+
+/** 제목에 이 낱말이 있으면 그 종목이다. 축구 영상은 "football" 이라고도 쓴다. */
+const SPORT_WORDS: Record<string, string[]> = {
+  football: ["football"],
+  soccer: ["soccer", "football", "futbol"],
+  basketball: ["basketball", "hoops"],
+  baseball: ["baseball"],
+  hockey: ["hockey"],
+};
+const OTHER_SPORTS = [
+  "lacrosse", "softball", "volleyball", "field hockey", "water polo", "rugby", "tennis", "golf",
+  "swimming", "track", "cross country", "wrestling", "rowing", "squash", "fencing", "gymnastics",
+];
+
+/** 제목이 우리 종목이 아닌 다른 종목을 말하는지. `sport` 는 "Football · Baseball" 처럼 둘일 수 있다. */
+function otherSport(title: string, sport: string): boolean {
+  const ours = new Set(sport.toLowerCase().split("·").flatMap((s) => SPORT_WORDS[s.trim()] ?? [s.trim()]));
+  const all = [...new Set([...Object.values(SPORT_WORDS).flat(), ...OTHER_SPORTS])];
+  // "field hockey" 안의 "hockey" 가 우리 것으로 읽히지 않게, 긴 이름을 먼저 지운다.
+  let rest = title.toLowerCase();
+  for (const w of all.sort((a, b) => b.length - a.length)) {
+    if (!new RegExp(`\\b${w}\\b`).test(rest)) continue;
+    if (!ours.has(w)) return true;
+    rest = rest.replace(new RegExp(`\\b${w}\\b`, "g"), " ");
+  }
+  return false;
 }
 
 export function searchUrl(query: string): string {
@@ -34,13 +75,23 @@ export function searchUrl(query: string): string {
  * 10월 20일 LG-KIA 경기에 "Twins vs Tigers｜10.12" 영상이 걸렸다. 이름만 보면 맞는 영상이다.
  * 날짜는 하루 앞뒤까지 받는다 — 한국 경기는 태평양 날짜로 하루 전이다.
  *
+ * **다른 종목이면 안 받는다.** 학교는 이름 하나로 여러 종목을 한다 — 하버드 풋볼 경기에
+ * "Harvard vs Princeton Lacrosse Highlights" 가 걸렸다. 두 이름도 맞고 날짜도 안 적혀 있었다.
+ *
  * **쿼터·하프 조각은 안 받는다.** 막 끝난 경기는 "Full 1st Qtr Highlights" 가 먼저 올라와 있고,
  * 한 번 걸리면 반나절 캐시에 묶인다. 차라리 검색으로 보내면 경기 전체 영상이 올라온 뒤에 찾는다.
  */
-export function titleFits(title: string, us: string[], them: string[], startsAt?: string | null): boolean {
+export function titleFits(
+  title: string,
+  us: string[],
+  them: string[],
+  startsAt?: string | null,
+  sport?: string | null,
+): boolean {
   const lower = title.toLowerCase();
   const has = (list: string[]) => list.some((t) => t.length > 2 && lower.includes(t.toLowerCase()));
   if (!(lower.includes("highlight") && (has(us) || has(them))) && !(has(us) && has(them))) return false;
+  if (sport && otherSport(title, sport)) return false;
   if (/\b(1st|2nd|3rd|4th|first|second|third|fourth)\s+(qtr|quarter|half|period)\b/i.test(title)) return false;
 
   const said = titleDates(title);

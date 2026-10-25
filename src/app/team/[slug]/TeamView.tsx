@@ -5,6 +5,7 @@ import Link from "next/link";
 import { findCity, type Team } from "@/lib/sources/teams";
 import { defaultProgram, type Injury, type Program, type Roster, type ScheduleSplit } from "@/lib/sources";
 import { recordOf, splitSchedule } from "@/lib/sources/split";
+import { querySport } from "@/lib/highlight";
 import { Ball } from "@/components/Ball";
 import type { Article, Fetched, Game, StandingsGroup, TeamSnapshot } from "@/lib/sources/types";
 import { dayLabel, gameLabel, relative, shortDate, timeLabel } from "@/lib/format";
@@ -265,7 +266,12 @@ function NowTab({
       {split.last && (
         <section>
           <SectionTitle aside={relative(split.last.startsAt)}>Last game</SectionTitle>
-          <GameRow game={split.last} accent={team.colors.primary} teamName={team.shortName} />
+          <GameRow
+            game={split.last}
+            accent={team.colors.primary}
+            teamName={team.shortName}
+            sport={querySport(team, program?.label)}
+          />
           {highlight && (
             <a
               href={highlight.url}
@@ -441,7 +447,13 @@ function ScheduleTab({
           <SectionTitle aside={recordOf(split.finished) ?? undefined}>Results</SectionTitle>
           <div>
             {[...split.finished].reverse().map((g) => (
-              <GameRow key={g.id} game={g} accent={team.colors.primary} teamName={team.shortName} />
+              <GameRow
+                key={g.id}
+                game={g}
+                accent={team.colors.primary}
+                teamName={team.shortName}
+                sport={querySport(team, program.label)}
+              />
             ))}
           </div>
         </section>

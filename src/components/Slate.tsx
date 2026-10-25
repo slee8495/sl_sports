@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { ShelfCard } from "@/lib/sources";
 import type { Game } from "@/lib/sources/types";
 import { gameLabel, isToday, relative, timeLabel } from "@/lib/format";
-import { highlightQuery, nameTokens } from "@/lib/highlight";
+import { highlightQuery, nameTokens, querySport } from "@/lib/highlight";
 import { findHighlight, type Highlight } from "@/lib/sources/youtube";
 import { LiveDot, PlayMark, matchup, scoreline } from "@/components/Bits";
 
@@ -76,10 +76,11 @@ export async function Slate({ cards }: { cards: ShelfCard[] }) {
   const highlights = await Promise.all(
     recent.map(({ card, game }) =>
       findHighlight(
-        highlightQuery(card.team.shortName, game),
+        highlightQuery(card.team.shortName, game, querySport(card.team)),
         nameTokens(card.team.name, card.team.shortName, card.team.nickname),
         nameTokens(game.opponent.name, game.opponent.shortName),
         game.startsAt,
+        card.team.sport,
       ),
     ),
   );
