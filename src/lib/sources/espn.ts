@@ -105,7 +105,8 @@ type EspnCompetitor = {
   id?: string;
   homeAway?: string;
   winner?: boolean;
-  score?: string | { value?: number; displayValue?: string };
+  /** 일정(schedule)에서는 승부차기 골이 점수 안에 온다. 스코어보드는 바깥(`shootoutScore`)에. */
+  score?: string | { value?: number; displayValue?: string; shootoutScore?: number };
   team?: EspnTeamRef;
   /** 토너먼트(대학)에서는 시드가 여기 온다. 프로는 99 같은 빈 값이다. */
   curatedRank?: { current?: number };
@@ -182,6 +183,11 @@ function scoreOf(c: EspnCompetitor | undefined): number | null {
   return typeof n === "number" && Number.isFinite(n) ? Math.round(n) : null;
 }
 
+function shootoutOf(c: EspnCompetitor | undefined): number | null {
+  const n = c?.shootoutScore ?? (typeof c?.score === "object" ? c.score.shootoutScore : undefined);
+  return typeof n === "number" && Number.isFinite(n) ? Math.round(n) : null;
+}
+
 /** ESPN 의 상태 낱말을 우리 것으로. 모르는 것은 예정으로 본다 — 없는 상태를 짓지 않는다. */
 function statusOf(s: EspnStatus | undefined): GameStatus {
   const name = s?.type?.name ?? "";
@@ -240,7 +246,11 @@ function toGame(e: EspnEvent, ourTeamId: string, path: string): Game | null {
     // 축구에서는 비긴 것을 "D"(draw)라고 적는다. 팬이 읽는 글자가 그것이다.
     const tie = isSoccer(path) ? "D" : "T";
     result = ourScore > theirScore ? "W" : ourScore < theirScore ? "L" : tie;
+    // 점수는 같은데 ESPN 이 한쪽을 이긴 팀으로 적었으면 승부차기로 갈린 것이다.
+    if (result === tie && us?.winner !== them.winner) result = us?.winner ? "W" : "L";
   }
+  const ourPk = done ? shootoutOf(us) : null;
+  const theirPk = done ? shootoutOf(them) : null;
 
   const links = (e.links ?? [])
     .filter((l) => l.href && (l.rel?.includes("tickets") || l.rel?.includes("video")))
@@ -268,6 +278,7 @@ function toGame(e: EspnEvent, ourTeamId: string, path: string): Game | null {
     ourScore,
     theirScore,
     result,
+    shootout: ourPk != null && theirPk != null ? { ours: ourPk, theirs: theirPk } : null,
     venue: comp.venue?.fullName ? (city ? `${comp.venue.fullName} · ${city}` : comp.venue.fullName) : null,
     broadcast: comp.broadcasts?.[0]?.media?.shortName ?? comp.broadcasts?.[0]?.names?.[0] ?? null,
     note: noteOf(e, comp, path),

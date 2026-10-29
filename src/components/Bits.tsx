@@ -49,7 +49,8 @@ export function matchup(game: Game): string {
 
 export function scoreline(game: Game): string | null {
   if (game.ourScore == null || game.theirScore == null) return null;
-  return `${game.ourScore}–${game.theirScore}`;
+  const pk = game.shootout ? ` (${game.shootout.ours}–${game.shootout.theirs} PK)` : "";
+  return `${game.ourScore}–${game.theirScore}${pk}`;
 }
 
 /**

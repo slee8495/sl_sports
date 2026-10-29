@@ -187,6 +187,7 @@ export async function sidearmSchedule(src: SchoolSource, sportId: number): Promi
       ourScore,
       theirScore,
       result,
+      shootout: null,
       venue: location || null,
       broadcast: null,
       note,

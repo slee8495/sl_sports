@@ -153,6 +153,7 @@ function toGame(g: NaverGame, src: NaverSource): Game | null {
     ourScore,
     theirScore,
     result,
+    shootout: null,
     venue: g.stadium || null,
     broadcast: g.broadChannel || null,
     note,

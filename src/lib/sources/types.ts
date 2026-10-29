@@ -30,8 +30,13 @@ export type Game = {
   /** 우리 팀 점수 / 상대 점수. 하는 중이면 지금 점수, 시작 전이면 null. 승패는 `result`. */
   ourScore: number | null;
   theirScore: number | null;
-  /** 비기면 "T", 축구에서는 "D". */
+  /**
+   * 비기면 "T", 축구에서는 "D". **승부차기로 갈렸으면 이긴 쪽이 "W"** — 첼시가 리버풀과 1-1 뒤
+   * 승부차기 5-6 으로 졌는데 "D" 로 떠서 비긴 줄 알았다(소유자 지적).
+   */
   result: "W" | "L" | "T" | "D" | null;
+  /** 승부차기 골, 우리 / 상대. 승부차기까지 간 경기만, 아니면 null. */
+  shootout: { ours: number; theirs: number } | null;
   venue: string | null;
   /** 중계 채널 — "CBS", "ESPN+". */
   broadcast: string | null;
