@@ -119,7 +119,13 @@ type EspnCompetition = {
   date?: string;
   neutralSite?: boolean;
   venue?: { fullName?: string; address?: { city?: string; state?: string } };
-  broadcasts?: { media?: { shortName?: string }; names?: string[] }[];
+  /** 일정(schedule)은 `market` 이 `{ type: "Home" }` 이고, 스코어보드는 그냥 "home" 이다. */
+  broadcasts?: {
+    media?: { shortName?: string };
+    names?: string[];
+    market?: string | { type?: string };
+    type?: { shortName?: string };
+  }[];
   competitors?: EspnCompetitor[];
   status?: EspnStatus;
   notes?: { headline?: string }[];
@@ -186,6 +192,26 @@ function scoreOf(c: EspnCompetitor | undefined): number | null {
 function shootoutOf(c: EspnCompetitor | undefined): number | null {
   const n = c?.shootoutScore ?? (typeof c?.score === "object" ? c.score.shootoutScore : undefined);
   return typeof n === "number" && Number.isFinite(n) ? Math.round(n) : null;
+}
+
+/**
+ * 어디서 보나 — 전국 중계와 **우리 쪽** 지역 중계, TV 먼저, 둘까지.
+ *
+ * 첫 칸만 쓰고 있었더니 브루인스 원정에 "ESPN+" 만 떴다. 보스턴에서 실제로 트는 NESN 은
+ * 세 번째에 있었고, 상대 홈 채널(Blues App)은 우리에게 쓸모가 없다. 우리 쪽이 하나도 안
+ * 맞으면(셀틱스 홈경기의 League Pass 가 "Away" 로 온다) 첫 칸으로 돌아간다.
+ */
+function broadcastOf(comp: EspnCompetition, side: string | undefined): string | null {
+  const list = (comp.broadcasts ?? []).map((b) => ({
+    name: b.media?.shortName ?? b.names?.[0] ?? null,
+    market: (typeof b.market === "string" ? b.market : b.market?.type ?? "").toLowerCase(),
+    tv: b.type?.shortName === "TV",
+  }));
+  const ours = list
+    .filter((b) => b.name && (b.market === "national" || b.market === "" || b.market === side))
+    .sort((a, b) => Number(b.tv) - Number(a.tv));
+  const names = [...new Set((ours.length ? ours : list.slice(0, 1)).map((b) => b.name))].filter(Boolean);
+  return names.length ? names.slice(0, 2).join(", ") : null;
 }
 
 /** ESPN 의 상태 낱말을 우리 것으로. 모르는 것은 예정으로 본다 — 없는 상태를 짓지 않는다. */
@@ -280,7 +306,7 @@ function toGame(e: EspnEvent, ourTeamId: string, path: string): Game | null {
     result,
     shootout: ourPk != null && theirPk != null ? { ours: ourPk, theirs: theirPk } : null,
     venue: comp.venue?.fullName ? (city ? `${comp.venue.fullName} · ${city}` : comp.venue.fullName) : null,
-    broadcast: comp.broadcasts?.[0]?.media?.shortName ?? comp.broadcasts?.[0]?.names?.[0] ?? null,
+    broadcast: broadcastOf(comp, us?.homeAway),
     note: noteOf(e, comp, path),
     /*
       **진행 중일 때만 채운다.** 끝난 경기에 "4th Quarter 0:00" 이 남아 있으면 아직 하는

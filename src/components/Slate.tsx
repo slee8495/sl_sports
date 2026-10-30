@@ -148,12 +148,17 @@ function SlateRow({ card, game, live }: Slot & { live?: boolean }) {
           {card.team.shortName} <span className="font-normal text-dim">{matchup(game)}</span>
         </p>
         <p className="mt-0.5 truncate text-xs text-dim tnum">
+          {/*
+            **어디서 보나.** 중계 채널은 구장보다 앞에 둔다 — 줄이 넘치면 끝이 잘리는데,
+            지금 틀어야 할 채널이 잘리면 안 된다. 구장은 잘려도 된다.
+          */}
           {live
-            ? [game.statusDetail ?? "In progress", game.venue].filter(Boolean).join(" · ")
+            ? [game.statusDetail ?? "In progress", game.broadcast, game.venue].filter(Boolean).join(" · ")
             : [
                 isToday(game.startsAt) ? (game.timeTbd ? "Today · time TBD" : `Today · ${timeLabel(game.startsAt)}`) : gameLabel(game.startsAt, game.timeTbd),
                 relative(game.startsAt),
-              ].join(" · ")}
+                game.broadcast,
+              ].filter(Boolean).join(" · ")}
         </p>
       </div>
 
