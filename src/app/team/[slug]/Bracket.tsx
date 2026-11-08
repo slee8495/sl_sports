@@ -109,7 +109,7 @@ function Tree({ layout, rounds, accent }: { layout: BracketLayout; rounds: Brack
     <div className="flex flex-col gap-6">
       {champion && <ChampionBanner team={champion} accent={accent} />}
 
-      <div ref={scroller} className="no-scrollbar -mx-5 overflow-x-auto px-[3px]">
+      <div ref={scroller} className="no-scrollbar -mx-5 overflow-x-auto px-[3px] md:-mx-8">
         <div className="mx-auto" style={{ width }}>
           {/* 라운드 이름. 칸 바로 위에, 칸 폭에 맞춰. */}
           <div className="relative h-8" style={{ width }}>
@@ -331,7 +331,7 @@ function BracketList({ rounds: all, accent }: { rounds: BracketRound[]; accent: 
     <div className="flex flex-col gap-6">
       {champion && <ChampionBanner team={champion} accent={accent} />}
 
-      <div className="no-scrollbar -mx-5 flex gap-2 overflow-x-auto px-5">
+      <div className="no-scrollbar -mx-5 flex gap-2 overflow-x-auto px-5 md:-mx-8 md:px-8">
         {rounds.map((r, i) => {
           const on = i === index;
           const live = r.matchups.some((m) => m.status === "in");

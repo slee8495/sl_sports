@@ -105,12 +105,13 @@ export function TeamView({ team, programs, news, live: liveNow, highlights }: Pr
         </div>
       )}
 
-      <nav className="no-scrollbar -mx-5 mt-6 flex gap-5 overflow-x-auto border-b border-edge px-5">
+      <nav className="no-scrollbar -mx-5 mt-6 flex gap-5 overflow-x-auto border-b border-edge px-5 md:-mx-8 md:gap-7 md:px-8 lg:mx-0 lg:px-0" aria-label="Sections">
         {visible.map((t) => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
-            className={`-mb-px shrink-0 border-b-2 pb-2.5 text-[13px] font-medium transition-colors ${
+            aria-current={active === t.key ? "page" : undefined}
+            className={`-mb-px shrink-0 border-b-2 pb-2.5 text-[13px] font-medium transition-colors md:pt-1 md:pb-3 md:text-sm ${
               active === t.key ? "text-ink" : "border-transparent text-faint hover:text-dim"
             }`}
             style={active === t.key ? { borderColor: team.colors.primary } : undefined}
@@ -223,104 +224,115 @@ function NowTab({
   const pastSeason = program?.pastSeason ?? null;
   const showNextHome = split.nextHome && split.nextHome.id !== split.next?.id;
   const hurt = (injuries ?? []).filter((i) => !/^active$/i.test(i.status));
+  const staff = roster && roster.coaches.length > 0;
 
+  /*
+    넓은 화면에서는 두 단이다 — 왼쪽은 경기(다음·홈·지난), 오른쪽은 사람(스태프·부상자).
+    휴대폰에서는 두 단이 그대로 위아래로 이어져서 순서도 간격도 예전과 같다.
+  */
   return (
-    <div className="flex flex-col gap-8">
-      {pastSeason && (
-        <p className="rounded-[3px] border border-edge px-3 py-2 text-xs text-dim">
-          This season&apos;s schedule isn&apos;t out yet. Showing {pastSeason - 1}–{String(pastSeason).slice(2)}.
-        </p>
-      )}
+    <div className="flex flex-col gap-8 lg:grid lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:items-start lg:gap-12 lg:[&>:only-child]:col-span-2">
+      <div className="flex flex-col gap-8">
+        {pastSeason && (
+          <p className="rounded-[3px] border border-edge px-3 py-2 text-xs text-dim">
+            This season&apos;s schedule isn&apos;t out yet. Showing {pastSeason - 1}–{String(pastSeason).slice(2)}.
+          </p>
+        )}
 
-      {live ? (
-        <Feature title="Playing now" game={live} accent={team.colors.primary} live ticketsUrl={team.ticketsUrl} />
-      ) : split.next ? (
-        <Feature title="Next game" game={split.next} accent={team.colors.primary} ticketsUrl={team.ticketsUrl} />
-      ) : (
-        <Empty>No games scheduled. Check back when the season opens.</Empty>
-      )}
+        {live ? (
+          <Feature title="Playing now" game={live} accent={team.colors.primary} live ticketsUrl={team.ticketsUrl} />
+        ) : split.next ? (
+          <Feature title="Next game" game={split.next} accent={team.colors.primary} ticketsUrl={team.ticketsUrl} />
+        ) : (
+          <Empty>No games scheduled. Check back when the season opens.</Empty>
+        )}
 
-      {showNextHome && split.nextHome && (
-        <section>
-          <SectionTitle aside={relative(split.nextHome.startsAt)}>Next home game</SectionTitle>
-          <div className="rounded-[3px] border border-edge px-4 py-3">
-            <p className="flex items-center gap-2 text-sm">
-              <Side game={split.nextHome} accent={team.colors.primary} />
-              {split.nextHome.opponent.name}
-            </p>
-            <div className="mt-1 flex items-center gap-2">
-              <span className="text-xs text-dim tnum">
-                {gameLabel(split.nextHome.startsAt, split.nextHome.timeTbd)}
-                {split.nextHome.venue ? ` · ${split.nextHome.venue}` : ""}
-              </span>
-              {(() => {
-                const perGame = split.nextHome?.links.find((l) => /ticket/i.test(l.label));
-                const url = perGame?.url ?? team.ticketsUrl;
-                return url ? <Tickets url={url} /> : null;
-              })()}
+        {showNextHome && split.nextHome && (
+          <section>
+            <SectionTitle aside={relative(split.nextHome.startsAt)}>Next home game</SectionTitle>
+            <div className="rounded-[3px] border border-edge px-4 py-3">
+              <p className="flex items-center gap-2 text-sm">
+                <Side game={split.nextHome} accent={team.colors.primary} />
+                {split.nextHome.opponent.name}
+              </p>
+              <div className="mt-1 flex items-center gap-2">
+                <span className="text-xs text-dim tnum">
+                  {gameLabel(split.nextHome.startsAt, split.nextHome.timeTbd)}
+                  {split.nextHome.venue ? ` · ${split.nextHome.venue}` : ""}
+                </span>
+                {(() => {
+                  const perGame = split.nextHome?.links.find((l) => /ticket/i.test(l.label));
+                  const url = perGame?.url ?? team.ticketsUrl;
+                  return url ? <Tickets url={url} /> : null;
+                })()}
+              </div>
             </div>
-          </div>
-        </section>
-      )}
+          </section>
+        )}
 
-      {split.last && (
-        <section>
-          <SectionTitle aside={relative(split.last.startsAt)}>Last game</SectionTitle>
-          <GameRow
-            game={split.last}
-            accent={team.colors.primary}
-            teamName={team.shortName}
-            sport={querySport(team, program?.label)}
-          />
-          {highlight && (
-            <a
-              href={highlight.url}
-              target="_blank"
-              rel="noreferrer"
-              className="mt-3 inline-flex items-center gap-2 rounded-[3px] border border-edge px-3 py-2 text-xs hover:border-dim"
-            >
-              <PlayMark />
-              {/*
-                찾은 영상이면 제목을 그대로 보여 준다 — 무엇이 열릴지 알고 누르는 것과
-                모르고 누르는 것은 다르다. 못 찾았으면 유튜브 검색으로 간다고 적는다.
-              */}
-              <span className="truncate">{highlight.exact ? (highlight.title ?? "Highlights") : "Search highlights"}</span>
-            </a>
+        {split.last && (
+          <section>
+            <SectionTitle aside={relative(split.last.startsAt)}>Last game</SectionTitle>
+            <GameRow
+              game={split.last}
+              accent={team.colors.primary}
+              teamName={team.shortName}
+              sport={querySport(team, program?.label)}
+            />
+            {highlight && (
+              <a
+                href={highlight.url}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-3 inline-flex max-w-full items-center gap-2 rounded-[3px] border border-edge px-3 py-2 text-xs hover:border-dim"
+              >
+                <PlayMark />
+                {/*
+                  찾은 영상이면 제목을 그대로 보여 준다 — 무엇이 열릴지 알고 누르는 것과
+                  모르고 누르는 것은 다르다. 못 찾았으면 유튜브 검색으로 간다고 적는다.
+                */}
+                <span className="truncate">{highlight.exact ? (highlight.title ?? "Highlights") : "Search highlights"}</span>
+              </a>
+            )}
+          </section>
+        )}
+      </div>
+
+      {(staff || hurt.length > 0) && (
+        <div className="flex flex-col gap-8">
+          {staff && (
+            <section>
+              <SectionTitle>Staff</SectionTitle>
+              <ul className="flex flex-col gap-2">
+                {roster!.coaches.map((c) => (
+                  <li key={c.name} className="flex items-baseline justify-between gap-3 text-sm">
+                    <span>{c.name}</span>
+                    <span className="text-xs text-dim">
+                      {c.title}
+                      {c.experience ? ` · ${c.experience}` : ""}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </section>
           )}
-        </section>
-      )}
 
-      {roster && roster.coaches.length > 0 && (
-        <section>
-          <SectionTitle>Staff</SectionTitle>
-          <ul className="flex flex-col gap-2">
-            {roster.coaches.map((c) => (
-              <li key={c.name} className="flex items-baseline justify-between gap-3 text-sm">
-                <span>{c.name}</span>
-                <span className="text-xs text-dim">
-                  {c.title}
-                  {c.experience ? ` · ${c.experience}` : ""}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {hurt.length > 0 && (
-        <section>
-          <SectionTitle aside={`${hurt.length} out or limited`}>Injury report</SectionTitle>
-          <ul className="flex flex-col divide-y divide-edge/70">
-            {hurt.slice(0, 8).map((i) => (
-              <li key={`${i.player}-${i.date ?? ""}`} className="flex items-baseline justify-between gap-3 py-2">
-                <span className="text-sm">{i.player}</span>
-                <span className="shrink-0 text-xs" style={{ color: "var(--color-loss)" }}>
-                  {i.status}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
+          {hurt.length > 0 && (
+            <section>
+              <SectionTitle aside={`${hurt.length} out or limited`}>Injury report</SectionTitle>
+              <ul className="flex flex-col divide-y divide-edge/70">
+                {hurt.slice(0, 8).map((i) => (
+                  <li key={`${i.player}-${i.date ?? ""}`} className="flex items-baseline justify-between gap-3 py-2">
+                    <span className="text-sm">{i.player}</span>
+                    <span className="shrink-0 text-xs" style={{ color: "var(--color-loss)" }}>
+                      {i.status}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+        </div>
       )}
     </div>
   );
@@ -429,8 +441,9 @@ function ScheduleTab({
   if (failed) return <Failed what="the schedule" />;
   if (!program) return <Empty>No schedule published yet.</Empty>;
 
+  // 넓은 화면에서는 남은 경기와 끝난 경기를 나란히 — 둘을 오가며 보는 화면이다.
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-8 lg:grid lg:grid-cols-2 lg:items-start lg:gap-12 lg:[&>:only-child]:col-span-2">
       {split.upcoming.length > 0 && (
         <section>
           <SectionTitle aside={`${split.upcoming.length} left`}>Upcoming</SectionTitle>
@@ -496,7 +509,7 @@ function RosterTab({ roster, injuries }: { roster: Fetched<Roster>; injuries: Fe
   }
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-8 lg:grid lg:grid-cols-2 lg:items-start lg:gap-x-12 lg:[&>:only-child]:col-span-2">
       {[...groups.entries()].map(([group, players]) => (
         <section key={group}>
           <SectionTitle aside={`${players.length}`}>{titleCase(group)}</SectionTitle>
@@ -558,7 +571,7 @@ function StandingsTab({ standings, accent }: { standings: Fetched<StandingsGroup
   if (standings.length === 0) return <Empty>No standings for this league.</Empty>;
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-8 lg:grid lg:grid-cols-2 lg:items-start lg:gap-x-12 lg:[&>:only-child]:col-span-2">
       {standings.map((group) => {
         /*
           **리그마다 뜻 있는 칸이 다르다.** 대학은 컨퍼런스 전적이 순위를 가르는 값이라
@@ -579,7 +592,7 @@ function StandingsTab({ standings, accent }: { standings: Fetched<StandingsGroup
         <section key={`${group.parent ?? ""}-${group.name}`}>
           <SectionTitle aside={group.parent ?? undefined}>{group.name}</SectionTitle>
 
-          <div className="-mx-5 overflow-x-auto px-5">
+          <div className="-mx-5 overflow-x-auto px-5 md:-mx-8 md:px-8 lg:mx-0 lg:px-0">
             <table className="w-full min-w-[420px] border-collapse text-sm">
               <thead>
                 <tr className="text-[11px] text-faint">
@@ -657,7 +670,7 @@ function SoccerTable({ group, accent }: { group: StandingsGroup; accent: string 
     <section>
       <SectionTitle aside={group.parent ?? undefined}>{group.name}</SectionTitle>
 
-      <div className="-mx-5 overflow-x-auto px-5">
+      <div className="-mx-5 overflow-x-auto px-5 md:-mx-8 md:px-8 lg:mx-0 lg:px-0">
         <table className="w-full min-w-[420px] border-collapse text-sm">
           <thead>
             <tr className="text-[11px] text-faint">
@@ -712,9 +725,9 @@ function NewsTab({ news }: { news: Fetched<Article[]> }) {
   if (news.length === 0) return <Empty>No stories yet.</Empty>;
 
   return (
-    <ul className="flex flex-col divide-y divide-edge/70">
+    <ul className="flex flex-col divide-y divide-edge/70 lg:grid lg:grid-cols-2 lg:gap-x-12 lg:divide-y-0">
       {news.map((a) => (
-        <li key={a.id}>
+        <li key={a.id} className="lg:border-t lg:border-edge/70">
           <a
             href={a.url ?? "#"}
             target="_blank"

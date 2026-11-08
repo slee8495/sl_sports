@@ -17,14 +17,21 @@ export default async function Cities() {
   const cards = await Promise.all(TEAMS.map(getShelfCard));
 
   return (
-    <main>
-      <header className="pt-2 pb-7">
+    /*
+      넓은 화면(가로 iPad·노트북)에서는 두 단 — 왼쪽은 경기 목록, 오른쪽은 도시 팻말. 휴대폰에서는
+      예전처럼 위아래로 이어진다.
+    */
+    <main className="lg:grid lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:items-start lg:gap-x-12">
+      <header className="pt-2 lg:col-span-2">
         <p className="text-xs tracking-wide text-faint">{todayLabel()}</p>
         <h1 className="mt-2 text-[22px] leading-tight font-semibold">SL Sports</h1>
-        <Slate cards={cards} />
       </header>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="pb-7 lg:pb-0">
+        <Slate cards={cards} />
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:mt-5 lg:grid-cols-1 xl:gap-5">
         {CITIES.map((city) => {
           const teams = TEAMS.filter((t) => t.city === city.key);
           return (

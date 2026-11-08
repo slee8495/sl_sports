@@ -49,7 +49,7 @@ export default async function Library({ params }: { params: Promise<{ city: stri
             <span className="h-px flex-1 bg-edge" />
           </div>
 
-          <div className="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-4 lg:grid-cols-6 lg:gap-x-6">
             {teams.map((team) => {
               const card = bySlug.get(team.slug);
               return card ? <Cover key={team.slug} card={card} /> : null;

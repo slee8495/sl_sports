@@ -40,7 +40,11 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           (한쪽은 오늘, 한쪽은 팀 색 배너), 공통 머리띠를 얹으면 둘 다 반쯤 가려진다.
         */}
         <div
-          className="mx-auto w-full max-w-4xl px-5"
+          /*
+            폭은 휴대폰에서 그대로(옆 20px)이고, 화면이 넓어질수록 여백과 상한만 늘린다.
+            넓은 화면에서 한 줄이 끝없이 늘어지지 않게 — 2단으로 나누는 일은 화면마다 한다.
+          */
+          className="mx-auto w-full max-w-4xl px-5 md:px-8 lg:max-w-6xl"
           style={{
             paddingTop: "max(env(safe-area-inset-top), 1.25rem)",
             paddingBottom: "max(env(safe-area-inset-bottom), 3rem)",
