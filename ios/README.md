@@ -1,4 +1,4 @@
-# SL Sports — 아이폰 앱
+# SL Sports — 아이폰·아이패드 앱
 
 화면은 웹앱이 전부 갖고 있다. 이 앱은 **껍데기**다 — `https://slsports.vercel.app` 을
 `WKWebView` 로 띄우고, 홈 화면에서 다른 앱과 같은 줄에 서게 하는 것이 전부다.

@@ -16,7 +16,7 @@ settings:
     CODE_SIGN_STYLE: Automatic
     MARKETING_VERSION: "1.0"
     # 올릴 때마다 하나씩 올린다. 안 올리면 애플이 거절한다.
-    CURRENT_PROJECT_VERSION: "3"
+    CURRENT_PROJECT_VERSION: "4"
     SWIFT_VERSION: "5.0"
 
 targets:
@@ -33,10 +33,13 @@ targets:
         INFOPLIST_KEY_CFBundleDisplayName: SL Sports
         INFOPLIST_KEY_UILaunchScreen_Generation: true
         INFOPLIST_KEY_UIStatusBarStyle: UIStatusBarStyleDefault
-        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
-        # 아이폰 전용. 이걸 안 박으면 아이패드도 지원 대상이 되고, 그러면 애플이 멀티태스킹을
-        # 위해 네 방향을 전부 요구해서 업로드가 거절된다.
-        TARGETED_DEVICE_FAMILY: "1"
+        # 아이폰은 세로만, 아이패드는 네 방향 전부. 아이패드에서 한 방향이라도 빼면 애플이
+        # 멀티태스킹(Split View)을 위해 네 방향을 요구해서 업로드가 거절된다.
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: UIInterfaceOrientationPortrait
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
+        # 아이폰 + 아이패드. 넓은 화면은 웹앱이 맡는다 — 본문이 max-w-4xl(896pt)로 가운데에
+        # 서므로 아이패드 가로에서도 늘어지지 않는다(src/app/layout.tsx).
+        TARGETED_DEVICE_FAMILY: "1,2"
         # 챗의 마이크 버튼이 웹뷰 안에서 녹음을 건다. 이 문구가 없으면 iOS 가 마이크를
         # 아예 안 열어 주고, 화면에는 아무 일도 안 일어난 것처럼 보인다.
         INFOPLIST_KEY_NSMicrophoneUsageDescription: "말로 팀에 대해 물어볼 때 씁니다."
