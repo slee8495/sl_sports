@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getShelfCard } from "@/lib/sources";
-import { CITIES, MY_TEAMS, TEAMS } from "@/lib/sources/teams";
+import { CITIES, TEAMS } from "@/lib/sources/teams";
 import { todayLabel } from "@/lib/format";
 import { Slate } from "@/components/Slate";
 
@@ -10,11 +10,11 @@ export const dynamic = "force-dynamic";
 /*
   **첫 화면은 갈림길이다.** 도시를 하나 고르면 그 도시의 서가가 나온다.
 
-  그 위에 응원하는 팀들을 합친 "지금 하는 경기" 와 "다음 다섯 경기" 를 둔다. 서가 표지와 같은
-  값(`getShelfCard`)이라 캐시를 같이 쓴다. Los Angeles 2 는 응원 팀이 아니라서 여기 안 올린다.
+  그 위에 모든 도시를 합친 "지금 하는 경기" 와 "다음 다섯 경기" 를 둔다. 응원 팀이 아닌
+  Los Angeles 2 도 함께 올린다. 서가 표지와 같은 값(`getShelfCard`)이라 캐시를 같이 쓴다.
 */
 export default async function Cities() {
-  const cards = await Promise.all(MY_TEAMS.map(getShelfCard));
+  const cards = await Promise.all(TEAMS.map(getShelfCard));
 
   return (
     /*

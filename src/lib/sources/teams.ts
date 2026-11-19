@@ -1,5 +1,5 @@
 /**
- * 팀 표 — 응원하는 아홉(LA 넷, 샌디에이고·보스턴·런던 하나씩, 한국 둘)과, 응원하지 않지만
+ * 팀 표 — 응원하는 열(LA 다섯, 샌디에이고·보스턴·런던 하나씩, 한국 둘)과, 응원하지 않지만
  * 챙겨 보는 LA 프로팀 다섯(Los Angeles 2). **여기가 유일한 표다.**
  *
  * 팀을 더하거나 빼는 일이 여기 한 줄을 고치는 일이어야 한다 — 주소를 여러 곳에 흩어 놓으면
@@ -191,6 +191,23 @@ export const TEAMS: Team[] = [
     ticketsUrl: "https://www.nba.com/clippers/tickets",
     source: { kind: "espn", path: "basketball/nba", teamId: "12", standingsLevel: 3 },
     tagline: "It Takes Everything",
+  },
+  {
+    slug: "ducks",
+    name: "Anaheim Ducks",
+    shortName: "Ducks",
+    nickname: "Ducks",
+    league: "NHL",
+    level: "pro",
+    sport: "Hockey",
+    shelf: "Pro",
+    city: "la",
+    colors: { primary: "#FC4C02", secondary: "#B9975B", onPrimary: "#FFFFFF" },
+    logo: "https://a.espncdn.com/i/teamlogos/nhl/500/ana.png",
+    homeVenue: "Honda Center",
+    ticketsUrl: "https://www.nhl.com/ducks/tickets",
+    source: { kind: "espn", path: "hockey/nhl", teamId: "25", standingsLevel: 3 },
+    tagline: "Fear the Wings",
   },
   {
     slug: "lafc",
@@ -395,9 +412,6 @@ export const TEAMS: Team[] = [
     tagline: "Go Galaxy",
   },
 ];
-
-/** 첫 화면 경기 목록에 올리는 팀 — 응원하지 않는 Los Angeles 2 는 자기 서가에만 있다. */
-export const MY_TEAMS = TEAMS.filter((t) => t.city !== "la2");
 
 export function findTeam(slug: string): Team | null {
   return TEAMS.find((t) => t.slug === slug) ?? null;
