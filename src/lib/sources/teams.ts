@@ -1,5 +1,5 @@
 /**
- * 팀 표 — 응원하는 열(LA 다섯, 샌디에이고·보스턴·런던 하나씩, 한국 둘)과, 응원하지 않지만
+ * 팀 표 — 응원하는 열하나(LA 다섯, 샌디에이고·스탠포드·보스턴·런던 하나씩, 한국 둘)와, 응원하지 않지만
  * 챙겨 보는 LA 프로팀 다섯(Los Angeles 2). **여기가 유일한 표다.**
  *
  * 팀을 더하거나 빼는 일이 여기 한 줄을 고치는 일이어야 한다 — 주소를 여러 곳에 흩어 놓으면
@@ -82,16 +82,17 @@ export type Source = EspnSource | SchoolSource | NaverSource;
  * 첫 화면의 갈림길. 도시를 고르면 그 도시의 서가가 나온다.
  *
  * Los Angeles 1 은 응원하는 LA 프로팀, Los Angeles 2 는 응원하지 않는 LA 권 프로팀이다.
- * 샌디에이고에는 UCSD, 보스턴에는 하버드.
+ * 샌디에이고에는 UCSD, 스탠포드에는 스탠포드 대학, 보스턴에는 하버드.
  * "Korea" 는 도시가 아니라 나라지만 LG(서울)와 수원을 한 칸에 둔다.
  * 이름은 줄이지 않는다 — "LA" 가 아니라 "Los Angeles".
  */
-export type CityKey = "la" | "la2" | "san-diego" | "boston" | "london" | "korea";
+export type CityKey = "la" | "la2" | "san-diego" | "stanford" | "boston" | "london" | "korea";
 
 export const CITIES: { key: CityKey; name: string }[] = [
   { key: "la", name: "Los Angeles 1" },
   { key: "la2", name: "Los Angeles 2" },
   { key: "san-diego", name: "San Diego" },
+  { key: "stanford", name: "Stanford" },
   { key: "boston", name: "Boston" },
   { key: "london", name: "London" },
   { key: "korea", name: "Korea" },
@@ -301,6 +302,23 @@ export const TEAMS: Team[] = [
       standingsLevel: 2,
     },
     tagline: "Go Tritons",
+  },
+  {
+    slug: "stanford",
+    name: "Stanford Cardinal",
+    shortName: "Stanford",
+    nickname: "Cardinal",
+    league: "ACC · NCAA Football",
+    level: "college",
+    sport: "Football",
+    shelf: "College",
+    city: "stanford",
+    colors: { primary: "#8C1515", secondary: "#4D4F53", onPrimary: "#FFFFFF" },
+    logo: "https://a.espncdn.com/i/teamlogos/ncaa/500/24.png",
+    homeVenue: "Stanford Stadium",
+    ticketsUrl: "https://gostanford.com/tickets",
+    source: { kind: "espn", path: "football/college-football", teamId: "24", standingsLevel: 2 },
+    tagline: "Fear the Tree",
   },
   {
     slug: "harvard",
