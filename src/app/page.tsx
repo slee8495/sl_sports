@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { getShelfCard } from "@/lib/sources";
 import { CITIES, TEAMS } from "@/lib/sources/teams";
@@ -12,10 +13,11 @@ export const dynamic = "force-dynamic";
 
   그 위에 모든 도시를 합친 "지금 하는 경기" 와 "다음 다섯 경기" 를 둔다. 응원 팀이 아닌
   Los Angeles 2 도 함께 올린다. 서가 표지와 같은 값(`getShelfCard`)이라 캐시를 같이 쓴다.
-*/
-export default async function Cities() {
-  const cards = await Promise.all(TEAMS.map(getShelfCard));
 
+  **경기 목록은 기다리지 않는다.** 스물한 팀을 다 읽어야 나오는 자리라, 출처 하나만 늦어도 앱 전체가
+  빈 화면으로 멈췄다. 도시 팻말은 바깥을 안 부르므로 먼저 그리고, 경기 목록은 도착하는 대로 채운다.
+*/
+export default function Cities() {
   return (
     /*
       넓은 화면(가로 iPad·노트북)에서는 두 단 — 왼쪽은 경기 목록, 오른쪽은 도시 팻말. 휴대폰에서는
@@ -28,7 +30,9 @@ export default async function Cities() {
       </header>
 
       <div className="pb-7 lg:pb-0">
-        <Slate cards={cards} />
+        <Suspense fallback={<p className="mt-5 text-sm text-dim">Loading games…</p>}>
+          <HomeSlate />
+        </Suspense>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:mt-5 lg:grid-cols-1 xl:gap-5">
@@ -66,4 +70,9 @@ export default async function Cities() {
       </div>
     </main>
   );
+}
+
+async function HomeSlate() {
+  const cards = await Promise.all(TEAMS.map(getShelfCard));
+  return <Slate cards={cards} />;
 }

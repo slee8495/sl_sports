@@ -9,6 +9,7 @@
  */
 
 import { unstable_cache } from "next/cache";
+import { cache } from "react";
 import { orderBracket } from "./bracket";
 import { orderStandings } from "./split";
 import type { EspnSource } from "./teams";
@@ -554,12 +555,14 @@ export async function espnNews(src: EspnSource, limit = 20): Promise<Fetched<Art
 }
 
 /**
- * 스탠딩.
+ * 리그 하나의 순위표 전체. 어느 팀이 "우리" 인지는 아직 안 적는다 — 그래야 같은 리그의 팀들이
+ * 표 하나를 나눠 쓴다.
  *
- * ESPN 은 리그 > 컨퍼런스 > 디비전 으로 파고드는 나무를 준다. 우리는 **우리 팀이 들어 있는
- * 묶음을 맨 앞에** 두고 나머지를 뒤에 붙인다 — 내 순위를 보러 들어온 화면이기 때문이다.
+ * **받은 JSON 이 아니라 추려 낸 결과를 캐시한다.** 대학 농구 순위표는 8MB, 대학 풋볼은 3MB 대라
+ * Next 의 2MB 한도를 넘어 캐시를 빠져나갔고, 첫 화면을 열 때마다 대학 여덟 팀 몫으로 50MB 를
+ * 새로 받았다. 못 읽으면 던진다 — 던져야 실패가 한 시간 동안 캐시되지 않는다.
  */
-export async function espnStandings(src: EspnSource): Promise<Fetched<StandingsGroup[]>> {
+async function fetchStandings(path: string, level: number, group: string | null): Promise<StandingsGroup[]> {
   type Node = {
     name?: string;
     abbreviation?: string;
@@ -573,11 +576,8 @@ export async function espnStandings(src: EspnSource): Promise<Fetched<StandingsG
     };
   };
 
-  const json = await read<Node>(
-    `${SITE_V2}/${src.path}/standings?level=${src.standingsLevel}${src.standingsGroup ? `&group=${src.standingsGroup}` : ""}`,
-    TTL.standings,
-  );
-  if (!json) return null;
+  const json = await readFresh<Node>(`${SITE_V2}/${path}/standings?level=${level}${group ? `&group=${group}` : ""}`);
+  if (!json) throw new Error("standings unavailable");
 
   const groups: StandingsGroup[] = [];
 
@@ -602,7 +602,7 @@ export async function espnStandings(src: EspnSource): Promise<Fetched<StandingsG
             name: e.team?.displayName ?? "",
             abbreviation: e.team?.abbreviation ?? null,
             logo: logoOf(e.team),
-            isUs: e.team?.id === src.teamId,
+            isUs: false,
             wins: num("wins") ?? fromRecord(0),
             losses: num("losses") ?? fromRecord(1),
             ties: num("ties") ?? fromRecord(2),
@@ -629,13 +629,36 @@ export async function espnStandings(src: EspnSource): Promise<Fetched<StandingsG
         parent,
         rows: sorted,
         ordered,
-        soccer: isSoccer(src.path),
+        soccer: isSoccer(path),
       });
     }
     for (const child of node.children ?? []) walk(child, node.name ?? parent);
   }
   walk(json, null);
+  return groups;
+}
 
+const cachedStandings = unstable_cache(fetchStandings, ["espn-standings"], { revalidate: TTL.standings });
+
+/** 한 화면에서 같은 리그의 팀들이 동시에 불러도 한 번만 읽는다. */
+const leagueStandings = cache((path: string, level: number, group: string | null) =>
+  cachedStandings(path, level, group).catch(() => null),
+);
+
+/**
+ * 스탠딩.
+ *
+ * ESPN 은 리그 > 컨퍼런스 > 디비전 으로 파고드는 나무를 준다. 우리는 **우리 팀이 들어 있는
+ * 묶음을 맨 앞에** 두고 나머지를 뒤에 붙인다 — 내 순위를 보러 들어온 화면이기 때문이다.
+ */
+export async function espnStandings(src: EspnSource): Promise<Fetched<StandingsGroup[]>> {
+  const table = await leagueStandings(src.path, src.standingsLevel, src.standingsGroup ?? null);
+  if (!table) return null;
+
+  const groups = table.map((g) => ({
+    ...g,
+    rows: g.rows.map((r) => ({ ...r, isUs: r.teamId === src.teamId })),
+  }));
   const ours = groups.filter((g) => g.rows.some((r) => r.isUs));
   const rest = groups.filter((g) => !g.rows.some((r) => r.isUs));
   return [...ours, ...rest];
