@@ -1,5 +1,5 @@
 /**
- * 팀 표 — 응원하는 열하나(LA 다섯, 샌디에이고·스탠포드·보스턴·런던 하나씩, 한국 둘)와, 응원하지 않지만
+ * 팀 표 — 응원하는 열셋(LA 다섯, 스탠포드·보스턴 풋볼과 농구 둘씩, 샌디에이고·런던 하나씩, 한국 둘)과, 응원하지 않지만
  * 챙겨 보는 LA 프로팀 다섯(Los Angeles 2). **여기가 유일한 표다.**
  *
  * 팀을 더하거나 빼는 일이 여기 한 줄을 고치는 일이어야 한다 — 주소를 여러 곳에 흩어 놓으면
@@ -82,7 +82,7 @@ export type Source = EspnSource | SchoolSource | NaverSource;
  * 첫 화면의 갈림길. 도시를 고르면 그 도시의 서가가 나온다.
  *
  * Los Angeles 1 은 응원하는 LA 프로팀, Los Angeles 2 는 응원하지 않는 LA 권 프로팀이다.
- * 샌디에이고에는 UCSD, 스탠포드에는 스탠포드 대학, 보스턴에는 하버드.
+ * 샌디에이고에는 UCSD, 스탠포드에는 스탠포드 대학, 보스턴에는 하버드. 두 학교는 풋볼과 농구가 따로 한 칸씩이다.
  * "Korea" 는 도시가 아니라 나라지만 LG(서울)와 수원을 한 칸에 둔다.
  * 이름은 줄이지 않는다 — "LA" 가 아니라 "Los Angeles".
  */
@@ -308,7 +308,7 @@ export const TEAMS: Team[] = [
     name: "Stanford Cardinal",
     shortName: "Stanford",
     nickname: "Cardinal",
-    league: "ACC · NCAA Football",
+    league: "Football · ACC",
     level: "college",
     sport: "Football",
     shelf: "College",
@@ -321,11 +321,33 @@ export const TEAMS: Team[] = [
     tagline: "Fear the Tree",
   },
   {
+    slug: "stanford-basketball",
+    name: "Stanford Cardinal",
+    shortName: "Stanford",
+    nickname: "Cardinal",
+    league: "Basketball · ACC",
+    level: "college",
+    sport: "Basketball",
+    shelf: "College",
+    city: "stanford",
+    colors: { primary: "#8C1515", secondary: "#4D4F53", onPrimary: "#FFFFFF" },
+    logo: "https://a.espncdn.com/i/teamlogos/ncaa/500/24.png",
+    homeVenue: "Maples Pavilion",
+    ticketsUrl: "https://gostanford.com/tickets",
+    source: {
+      kind: "espn",
+      path: "basketball/mens-college-basketball",
+      teamId: "24",
+      standingsLevel: 2,
+    },
+    tagline: "Fear the Tree",
+  },
+  {
     slug: "harvard",
     name: "Harvard Crimson",
     shortName: "Harvard",
     nickname: "Crimson",
-    league: "Ivy League · NCAA Football",
+    league: "Football · Ivy League",
     level: "college",
     sport: "Football",
     shelf: "College",
@@ -341,6 +363,28 @@ export const TEAMS: Team[] = [
       teamId: "108",
       standingsLevel: 2,
       standingsGroup: "81",
+    },
+    tagline: "Go Crimson",
+  },
+  {
+    slug: "harvard-basketball",
+    name: "Harvard Crimson",
+    shortName: "Harvard",
+    nickname: "Crimson",
+    league: "Basketball · Ivy League",
+    level: "college",
+    sport: "Basketball",
+    shelf: "College",
+    city: "boston",
+    colors: { primary: "#A51C30", secondary: "#1E1E1E", onPrimary: "#FFFFFF" },
+    logo: "https://a.espncdn.com/i/teamlogos/ncaa/500/108.png",
+    homeVenue: "Lavietes Pavilion",
+    ticketsUrl: "https://gocrimson.com/tickets",
+    source: {
+      kind: "espn",
+      path: "basketball/mens-college-basketball",
+      teamId: "108",
+      standingsLevel: 2,
     },
     tagline: "Go Crimson",
   },

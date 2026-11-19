@@ -1,6 +1,6 @@
 # SL Sports
 
-내가 응원하는 팀과 챙겨 보는 LA 프로팀, 열여섯 팀을 한 화면에. 첫 화면에서 **Los Angeles 1**·**Los Angeles 2**·**San Diego**·**Stanford**·**Boston**·**London**·**Korea** 중 하나를 고르면 그 도시의
+내가 응원하는 팀과 챙겨 보는 LA 프로팀, 열여덟 팀을 한 화면에. 첫 화면에서 **Los Angeles 1**·**Los Angeles 2**·**San Diego**·**Stanford**·**Boston**·**London**·**Korea** 중 하나를 고르면 그 도시의
 팀 로고가 꽂힌 **서가**가 나오고, 표지를 고르면 그 팀의 다음 경기·일정·로스터·순위표·부상자·
 뉴스가 나온다.
 
@@ -38,12 +38,14 @@
 | 팀 | 리그 | 출처 |
 | --- | --- | --- |
 | Stanford Cardinal | ACC 풋볼 | ESPN |
+| Stanford Cardinal | ACC 농구 | ESPN |
 
 **Boston**
 
 | 팀 | 리그 | 출처 |
 | --- | --- | --- |
 | Harvard Crimson | Ivy League 풋볼 (FCS) | ESPN |
+| Harvard Crimson | Ivy League 농구 | ESPN |
 
 **London**
 
@@ -91,7 +93,7 @@
 
 ```
 src/lib/sources/
-  teams.ts     열여섯 팀 표(도시 칸 포함). 팀을 더하고 빼는 일은 여기 한 줄을 고치는 일이다.
+  teams.ts     열여덟 팀 표(도시 칸 포함). 팀을 더하고 빼는 일은 여기 한 줄을 고치는 일이다.
   espn.ts      ESPN 어댑터
   naver.ts     네이버 스포츠 어댑터(KBO·K리그)
   sidearm.ts   학교 캘린더(.ics)·RSS 어댑터

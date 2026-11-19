@@ -125,6 +125,11 @@ function SlateList({
   );
 }
 
+/** 학교는 풋볼과 농구가 로고도 이름도 같아서, 경기 목록에서는 종목까지 적어야 갈린다. */
+function slateName(team: ShelfCard["team"]): string {
+  return team.level === "college" ? `${team.shortName} ${team.sport}` : team.shortName;
+}
+
 function TeamMark({ card }: { card: ShelfCard }) {
   return (
     <span
@@ -145,7 +150,7 @@ function SlateRow({ card, game, live }: Slot & { live?: boolean }) {
 
       <div className="min-w-0 flex-1">
         <p className="truncate text-[15px] font-semibold leading-tight group-hover:underline">
-          {card.team.shortName} <span className="font-normal text-dim">{matchup(game)}</span>
+          {slateName(card.team)} <span className="font-normal text-dim">{matchup(game)}</span>
         </p>
         <p className="mt-0.5 truncate text-xs text-dim tnum">
           {/*
@@ -181,7 +186,7 @@ function FinalRow({ card, game, highlight }: Slot & { highlight: Highlight }) {
         <TeamMark card={card} />
         <div className="min-w-0 flex-1">
           <p className="truncate text-[15px] font-semibold leading-tight group-hover:underline">
-            {card.team.shortName} <span className="font-normal text-dim">{matchup(game)}</span>
+            {slateName(card.team)} <span className="font-normal text-dim">{matchup(game)}</span>
           </p>
           <p className="mt-0.5 truncate text-xs text-dim tnum">
             {[gameLabel(game.startsAt, game.timeTbd), relative(game.startsAt)].join(" · ")}
