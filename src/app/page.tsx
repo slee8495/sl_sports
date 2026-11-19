@@ -8,10 +8,10 @@ import { Slate } from "@/components/Slate";
 export const dynamic = "force-dynamic";
 
 /*
-  **첫 화면은 갈림길이다.** LA·뉴욕·런던·한국 중 하나를 고르면 그 도시의 서가가 나온다.
+  **첫 화면은 갈림길이다.** 도시를 하나 고르면 그 도시의 서가가 나온다.
 
-  그 위에 모든 도시를 합친 "지금 하는 경기" 와 "다음 다섯 경기" 를 둔다. 그래서 여기서도
-  열여섯 팀을 다 읽는다 — 서가 표지와 같은 값(`getShelfCard`)이라 캐시를 같이 쓴다.
+  그 위에 모든 도시를 합친 "지금 하는 경기" 와 "다음 다섯 경기" 를 둔다. 응원 팀이 아닌
+  Los Angeles 2 도 함께 올린다. 서가 표지와 같은 값(`getShelfCard`)이라 캐시를 같이 쓴다.
 */
 export default async function Cities() {
   const cards = await Promise.all(TEAMS.map(getShelfCard));
