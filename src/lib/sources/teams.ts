@@ -1,5 +1,5 @@
 /**
- * 팀 표 — 응원하는 열셋(LA 다섯, 팔로알토(스탠포드)·보스턴 풋볼과 농구 둘씩, 샌디에이고·런던 하나씩, 한국 둘)과, 응원하지 않지만
+ * 팀 표 — 응원하는 열여섯(LA 다섯, 대학 여덟, 런던 하나, 한국 둘)과, 응원하지 않지만
  * 챙겨 보는 LA 프로팀 다섯(Los Angeles 2). **여기가 유일한 표다.**
  *
  * 팀을 더하거나 빼는 일이 여기 한 줄을 고치는 일이어야 한다 — 주소를 여러 곳에 흩어 놓으면
@@ -82,18 +82,16 @@ export type Source = EspnSource | SchoolSource | NaverSource;
  * 첫 화면의 갈림길. 도시를 고르면 그 도시의 서가가 나온다.
  *
  * Los Angeles 1 은 응원하는 LA 프로팀, Los Angeles 2 는 응원하지 않는 LA 권 프로팀이다.
- * 샌디에이고에는 UCSD, 팔로알토에는 스탠포드, 보스턴에는 하버드. 두 학교는 풋볼과 농구가 따로 한 칸씩이다.
+ * 대학은 지역을 가리지 않고 Colleges 한 곳에 모은다. 스탠포드·하버드·듀크는 풋볼과 농구가 따로 한 칸씩이다.
  * "Korea" 는 도시가 아니라 나라지만 LG(서울)와 수원을 한 칸에 둔다.
  * 이름은 줄이지 않는다 — "LA" 가 아니라 "Los Angeles".
  */
-export type CityKey = "la" | "la2" | "san-diego" | "palo-alto" | "boston" | "london" | "korea";
+export type CityKey = "la" | "la2" | "colleges" | "london" | "korea";
 
 export const CITIES: { key: CityKey; name: string }[] = [
   { key: "la", name: "Los Angeles 1" },
   { key: "la2", name: "Los Angeles 2" },
-  { key: "san-diego", name: "San Diego" },
-  { key: "palo-alto", name: "Palo Alto" },
-  { key: "boston", name: "Boston" },
+  { key: "colleges", name: "Colleges" },
   { key: "london", name: "London" },
   { key: "korea", name: "Korea" },
 ];
@@ -286,11 +284,11 @@ export const TEAMS: Team[] = [
     name: "UC San Diego Tritons",
     shortName: "UCSD",
     nickname: "Tritons",
-    league: "Big West · NCAA Basketball",
+    league: "Basketball · Big West",
     level: "college",
     sport: "Basketball",
     shelf: "College",
-    city: "san-diego",
+    city: "colleges",
     colors: { primary: "#182B49", secondary: "#FFCD00", onPrimary: "#FFFFFF" },
     logo: "https://a.espncdn.com/i/teamlogos/ncaa/500/28.png",
     homeVenue: "LionTree Arena",
@@ -304,6 +302,28 @@ export const TEAMS: Team[] = [
     tagline: "Go Tritons",
   },
   {
+    slug: "uci",
+    name: "UC Irvine Anteaters",
+    shortName: "UC Irvine",
+    nickname: "Anteaters",
+    league: "Basketball · Big West",
+    level: "college",
+    sport: "Basketball",
+    shelf: "College",
+    city: "colleges",
+    colors: { primary: "#002B5C", secondary: "#FEC52E", onPrimary: "#FFFFFF" },
+    logo: "https://a.espncdn.com/i/teamlogos/ncaa/500/300.png",
+    homeVenue: "Bren Events Center",
+    ticketsUrl: "https://ucirvinesports.com/tickets",
+    source: {
+      kind: "espn",
+      path: "basketball/mens-college-basketball",
+      teamId: "300",
+      standingsLevel: 2,
+    },
+    tagline: "Zot Zot Zot",
+  },
+  {
     slug: "stanford",
     name: "Stanford Cardinal",
     shortName: "Stanford",
@@ -312,7 +332,7 @@ export const TEAMS: Team[] = [
     level: "college",
     sport: "Football",
     shelf: "College",
-    city: "palo-alto",
+    city: "colleges",
     colors: { primary: "#8C1515", secondary: "#4D4F53", onPrimary: "#FFFFFF" },
     logo: "https://a.espncdn.com/i/teamlogos/ncaa/500/24.png",
     homeVenue: "Stanford Stadium",
@@ -329,7 +349,7 @@ export const TEAMS: Team[] = [
     level: "college",
     sport: "Basketball",
     shelf: "College",
-    city: "palo-alto",
+    city: "colleges",
     colors: { primary: "#8C1515", secondary: "#4D4F53", onPrimary: "#FFFFFF" },
     logo: "https://a.espncdn.com/i/teamlogos/ncaa/500/24.png",
     homeVenue: "Maples Pavilion",
@@ -351,7 +371,7 @@ export const TEAMS: Team[] = [
     level: "college",
     sport: "Football",
     shelf: "College",
-    city: "boston",
+    city: "colleges",
     colors: { primary: "#A51C30", secondary: "#1E1E1E", onPrimary: "#FFFFFF" },
     logo: "https://a.espncdn.com/i/teamlogos/ncaa/500/108.png",
     homeVenue: "Harvard Stadium",
@@ -375,7 +395,7 @@ export const TEAMS: Team[] = [
     level: "college",
     sport: "Basketball",
     shelf: "College",
-    city: "boston",
+    city: "colleges",
     colors: { primary: "#A51C30", secondary: "#1E1E1E", onPrimary: "#FFFFFF" },
     logo: "https://a.espncdn.com/i/teamlogos/ncaa/500/108.png",
     homeVenue: "Lavietes Pavilion",
@@ -387,6 +407,50 @@ export const TEAMS: Team[] = [
       standingsLevel: 2,
     },
     tagline: "Go Crimson",
+  },
+  {
+    slug: "duke",
+    name: "Duke Blue Devils",
+    shortName: "Duke",
+    nickname: "Blue Devils",
+    league: "Football · ACC",
+    level: "college",
+    sport: "Football",
+    shelf: "College",
+    city: "colleges",
+    colors: { primary: "#00539B", secondary: "#FFFFFF", onPrimary: "#FFFFFF" },
+    logo: "https://a.espncdn.com/i/teamlogos/ncaa/500/150.png",
+    homeVenue: "Wallace Wade Stadium",
+    ticketsUrl: "https://goduke.com/tickets",
+    source: {
+      kind: "espn",
+      path: "football/college-football",
+      teamId: "150",
+      standingsLevel: 2,
+    },
+    tagline: "Go Duke",
+  },
+  {
+    slug: "duke-basketball",
+    name: "Duke Blue Devils",
+    shortName: "Duke",
+    nickname: "Blue Devils",
+    league: "Basketball · ACC",
+    level: "college",
+    sport: "Basketball",
+    shelf: "College",
+    city: "colleges",
+    colors: { primary: "#00539B", secondary: "#FFFFFF", onPrimary: "#FFFFFF" },
+    logo: "https://a.espncdn.com/i/teamlogos/ncaa/500/150.png",
+    homeVenue: "Cameron Indoor Stadium",
+    ticketsUrl: "https://goduke.com/tickets",
+    source: {
+      kind: "espn",
+      path: "basketball/mens-college-basketball",
+      teamId: "150",
+      standingsLevel: 2,
+    },
+    tagline: "Go Duke",
   },
   {
     slug: "lakers",
