@@ -1,6 +1,6 @@
 # SL Sports
 
-내가 응원하는 팀과 챙겨 보는 LA 프로팀, 열여덟 팀을 한 화면에. 첫 화면에서 **Los Angeles 1**·**Los Angeles 2**·**San Diego**·**Stanford**·**Boston**·**London**·**Korea** 중 하나를 고르면 그 도시의
+내가 응원하는 팀과 챙겨 보는 LA 프로팀, 열여덟 팀을 한 화면에. 첫 화면에서 **Los Angeles 1**·**Los Angeles 2**·**San Diego**·**Palo Alto**·**Boston**·**London**·**Korea** 중 하나를 고르면 그 도시의
 팀 로고가 꽂힌 **서가**가 나오고, 표지를 고르면 그 팀의 다음 경기·일정·로스터·순위표·부상자·
 뉴스가 나온다.
 
@@ -33,7 +33,7 @@
 | --- | --- | --- |
 | UC San Diego Tritons | Big West 농구 | ESPN |
 
-**Stanford**
+**Palo Alto**
 
 | 팀 | 리그 | 출처 |
 | --- | --- | --- |
@@ -100,7 +100,7 @@ src/lib/sources/
   index.ts     화면이 부르는 창구. 어느 출처인지는 여기서 갈리고 여기서 끝난다.
   split.ts     일정을 다음 경기·다음 홈경기·최근 경기로 가르는 셈(바깥을 안 부른다)
 src/app/
-  page.tsx           도시 고르기 (Los Angeles 1 · Los Angeles 2 · San Diego · Stanford · Boston · London · Korea)
+  page.tsx           도시 고르기 (Los Angeles 1 · Los Angeles 2 · San Diego · Palo Alto · Boston · London · Korea)
   [city]/            도시 서가
   team/[slug]/       팀 화면 (Now · Schedule · Roster · Standings · News)
 ```
