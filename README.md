@@ -21,9 +21,9 @@
 
 | 팀 | 리그 | 출처 |
 | --- | --- | --- |
-| Los Angeles Lakers | NBA | ESPN |
-| Los Angeles Angels | MLB | ESPN |
 | Los Angeles Chargers | NFL | ESPN |
+| Los Angeles Angels | MLB | ESPN |
+| Los Angeles Lakers | NBA | ESPN |
 | Los Angeles Kings | NHL | ESPN |
 | LA Galaxy | MLS | ESPN |
 
