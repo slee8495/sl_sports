@@ -10,7 +10,7 @@
 
 import { unstable_cache } from "next/cache";
 import { cache } from "react";
-import { orderBracket } from "./bracket";
+import { orderBracket, seedOrder } from "./bracket";
 import { orderStandings } from "./split";
 import type { EspnSource } from "./teams";
 import type {
@@ -770,6 +770,27 @@ type PostseasonHow = {
    * 정규시즌은 11월 9일까지다(2026-10 확인). 정규시즌의 끝(types/1)은 실제 일정과 맞는다.
    */
   afterRegular?: boolean;
+  /**
+   * 포스트시즌으로 치는 시즌 종류. 없으면 3(플레이인이 있으면 5 도). 대학 야구는 라운드마다
+   * 종류가 다르고(3 리저널 · 4 슈퍼 · 5 CWS · 6 결승), FCS 는 1·2라운드가 정규시즌(2) 주차에 있다.
+   * 종류가 넓어지는 만큼 `keep` 으로 걸러야 한다.
+   */
+  types?: number[];
+  /** 창의 끝을 이 시즌 종류의 끝으로(대학 야구 — 6 이 CWS 결승). 없으면 3 의 끝. */
+  lastType?: number;
+  /** 주차형: 정규시즌 마지막 몇 주도 읽는다(FCS 1·2라운드). 창도 그 첫 주부터 열린다. */
+  regularWeeks?: number;
+  /**
+   * 더블 일리미네이션 네 팀 판(대학 야구의 리저널·CWS)을 매치업 하나로 접는다. `seedOrder` 의
+   * 자리와 시드는 전국 시드(`curatedRank`)다. 접는 법은 `foldPods` 에.
+   */
+  pods?: boolean;
+  /**
+   * 시드가 없는 리그의 자리를 **위에서부터** 잡는다(FCS — 경기 데이터의 시드가 99 다). 결승에서
+   * 만난 두 팀이 어느 칸에서 왔는지로 한 라운드씩 내려가며 자리를 박는다. 부전승 팀과 만난
+   * 첫 라운드 승자도 그 팀이 선 줄로 간다.
+   */
+  fromTop?: boolean;
 };
 
 const POSTSEASON: Record<string, PostseasonHow> = {
@@ -824,6 +845,35 @@ const POSTSEASON: Record<string, PostseasonHow> = {
   },
   // 리그전뿐이다. 포스트시즌이 없다(types/3 이 404).
   "soccer/eng.1": { by: "day", none: true },
+  /*
+    FCS(하버드 풋볼 — 아이비리그가 2025 부터 나간다). 24팀, 상위 8 시드는 1라운드를 쉰다.
+    1·2라운드는 정규시즌 14·15주에 붙어 오고(2025 확인), 8강부터 포스트시즌이다. 같은 주소의
+    FBS 팀(스탠퍼드)과 갈리는 열쇠는 순위표의 `group=81` 이다(`postseasonKey`).
+  */
+  "football/college-football#81": {
+    by: "week",
+    query: "groups=81&limit=200",
+    keep: /^FCS Championship/i,
+    types: [2, 3],
+    regularWeeks: 3,
+    rounds: ["First Round", "Second Round", "Quarterfinals", "Semifinals", "National Championship"],
+    fromTop: true,
+  },
+  /*
+    대학 야구: 64팀 → 리저널 16(네 팀 더블 일리미네이션) → 슈퍼 리저널 8(3전 2선승) →
+    CWS(네 팀 판 둘) → 결승(3전 2선승). 리저널은 판마다 한 칸(그 판의 결승), CWS 는 첫 경기
+    넷 → 판 결승 둘로 편다 — 그래야 16 → 8 → 4 → 2 → 1 로 반씩 줄어 나무가 선다.
+  */
+  "baseball/college-baseball": {
+    by: "day",
+    query: "limit=300",
+    keep: /^(NCAA Baseball Championship|Men's College World Series)/i,
+    types: [3, 4, 5, 6],
+    lastType: 6,
+    pods: true,
+    pre: ["CWS Bracket Games"],
+    rounds: ["Regionals", "Super Regionals", "CWS Opening Round", "CWS Bracket Final", "CWS Finals"],
+  },
 };
 
 type Round = { round: string; group: string | null; label: string | null };
@@ -872,6 +922,25 @@ function roundOf(headline: string): Round {
 
   const ncaa = h.match(/^NCAA Men's Basketball Championship - (?:(\w+) Region - )?(.+)$/i);
   if (ncaa) return { round: ncaa[2], group: ncaa[1] ?? null, label: null };
+
+  // FCS  "FCS Championship - First Round" · "FCS Championship - Quarterfinals" · "FCS Championship"
+  const fcs = h.match(/^FCS Championship(?: - (.+))?$/i);
+  if (fcs) return { round: fcs[1] ?? "National Championship", group: null, label: null };
+
+  /*
+    대학 야구(2026): "NCAA Baseball Championship - Athens Regional - Elimination Game" ·
+    "... - Atlanta Regional Rescheduled from 5/29" · "... - Athens Super Regional" ·
+    "Men's College World Series - Double Elimination Round" ·
+    "Men's College World Series Championship Final"
+    **끝난 리저널 결승은 이름표가 바뀐다** — "... - Athens Regional - Georgia advances to Super
+    Regional". 그래서 슈퍼 리저널은 대시를 안 넘는 이름으로만 잡는다.
+  */
+  const sup = h.match(/^NCAA Baseball Championship - ([^-]+?) Super Regional/i);
+  if (sup) return { round: "Super Regionals", group: null, label: `${sup[1]} Super Regional` };
+  const reg = h.match(/^NCAA Baseball Championship - (.+?) Regional/i);
+  if (reg) return { round: "Regionals", group: null, label: `${reg[1]} Regional` };
+  if (/^Men's College World Series Championship Final/i.test(h)) return { round: "CWS Finals", group: null, label: null };
+  if (/^Men's College World Series/i.test(h)) return { round: "College World Series", group: null, label: null };
 
   return { round: h, group: null, label: null };
 }
@@ -1024,16 +1093,18 @@ function ymd(t: number): string {
   return new Date(t).toISOString().slice(0, 10).replace(/-/g, "");
 }
 
-async function fetchPostseason(path: string, ourTeamId: string): Promise<Fetched<BracketRound[]>> {
-  const how = POSTSEASON[path] ?? { by: "day" as const };
+async function fetchPostseason(key: string, ourTeamId: string): Promise<Fetched<BracketRound[]>> {
+  const how = POSTSEASON[key] ?? { by: "day" as const };
   if (how.none) return [];
+  // 열쇠는 주소이거나 "주소#그룹"(FCS) — 부르는 곳은 주소다.
+  const path = key.split("#")[0];
   const [sport, league] = path.split("/");
 
   // 지금 시즌이 몇 년인지, 그리고 주차형 리그면 포스트시즌 주차가 무엇인지.
   const board = await read<{
     leagues?: {
       season?: { year?: number };
-      calendar?: { value?: string; startDate?: string; entries?: { value?: string }[] }[] | string[];
+      calendar?: { value?: string; startDate?: string; entries?: { value?: string; startDate?: string }[] }[] | string[];
     }[];
   }>(`${SITE}/${path}/scoreboard`, TTL.live);
   const year = board?.leagues?.[0]?.season?.year;
@@ -1051,14 +1122,23 @@ async function fetchPostseason(path: string, ourTeamId: string): Promise<Fetched
     start = Date.parse(regular.endDate);
     end = start + 60 * 86_400_000;
   } else {
-    const [post, playIn] = await Promise.all([
+    const [post, playIn, last] = await Promise.all([
       read<Window>(typeUrl(3), TTL.standings),
       how.playIn ? read<Window>(typeUrl(5), TTL.standings) : Promise.resolve(null),
+      how.lastType ? read<Window>(typeUrl(how.lastType), TTL.standings) : Promise.resolve(null),
     ]);
     if (!post?.startDate) return null;
     start = Date.parse(playIn?.startDate ?? post.startDate);
-    end = Date.parse(post.endDate ?? "");
+    end = Date.parse((last ?? post).endDate ?? "");
   }
+
+  // 정규시즌 주차에 붙어 오는 라운드(FCS 1·2라운드) — 창도 그 첫 주부터다.
+  const cal = board?.leagues?.[0]?.calendar;
+  const calOf = (v: string) => (Array.isArray(cal) ? cal.find((c) => typeof c === "object" && c.value === v) : undefined);
+  const regCal = calOf("2");
+  const regWeeks = how.regularWeeks && typeof regCal === "object" ? (regCal.entries ?? []).slice(-how.regularWeeks) : [];
+  const regStart = Date.parse(regWeeks[0]?.startDate ?? "");
+  if (Number.isFinite(regStart) && regStart < start) start = regStart;
   const now = Date.now();
   // **아직 안 열렸으면 없는 것이다.** 정규시즌 내내 빈 브래킷 탭을 띄우지 않는다.
   if (!Number.isFinite(start) || now < start) return [];
@@ -1066,9 +1146,10 @@ async function fetchPostseason(path: string, ourTeamId: string): Promise<Fetched
   const urls: { url: string; ttl: number }[] = [];
   const extra = how.query ? `&${how.query}` : "";
   if (how.by === "week") {
-    const cal = board?.leagues?.[0]?.calendar;
-    const postCal = Array.isArray(cal) ? cal.find((c) => typeof c === "object" && c.value === "3") : undefined;
+    const postCal = calOf("3");
     const weeks = typeof postCal === "object" ? (postCal.entries ?? []).map((w) => w.value).filter(Boolean) : [];
+    for (const w of regWeeks.map((x) => x.value).filter(Boolean))
+      urls.push({ url: `${SITE}/${path}/scoreboard?dates=${year}&seasontype=2&week=${w}${extra}`, ttl: TTL.live });
     for (const w of weeks) urls.push({ url: `${SITE}/${path}/scoreboard?dates=${year}&seasontype=3&week=${w}${extra}`, ttl: TTL.live });
   } else {
     // 오늘 다음 이틀까지 — 시리즈의 다음 경기 시각이 거기 있다. 끝난 날은 길게 캐시한다.
@@ -1099,7 +1180,8 @@ async function fetchPostseason(path: string, ourTeamId: string): Promise<Fetched
         round = slugRound(e.season?.slug);
       } else {
         const type = e.season?.type;
-        if (type !== 3 && !(how.playIn && type === 5)) continue;
+        const types = how.types ?? (how.playIn ? [3, 5] : [3]);
+        if (typeof type !== "number" || !types.includes(type)) continue;
         if (comp.type?.abbreviation === "ALLSTAR") continue;
         const headline = comp.notes?.[0]?.headline ?? "";
         round = headline && !(how.keep && !how.keep.test(headline)) ? roundOf(headline) : null;
@@ -1109,9 +1191,12 @@ async function fetchPostseason(path: string, ourTeamId: string): Promise<Fetched
     }
   }
 
+  // 더블 일리미네이션 판은 따로 접는다. 나머지(시리즈·단판)는 아래 그대로.
+  const folded = how.pods ? foldPods(games, ourTeamId) : null;
+
   // 시리즈는 라운드+두 팀으로, 단판은 경기 하나로 묶는다.
   const buckets = new Map<string, PostGame[]>();
-  for (const g of games) {
+  for (const g of folded ? folded.rest : games) {
     const isSeries = isSeriesOf(g.comp);
     const ids = (g.comp.competitors ?? []).map((c) => c.team?.id ?? "").sort().join("-");
     const key = isSeries ? `${g.round.round}|${g.round.group ?? ""}|${ids}` : `game|${g.e.id}`;
@@ -1125,6 +1210,7 @@ async function fetchPostseason(path: string, ourTeamId: string): Promise<Fetched
     const name = list[0].round.round;
     rounds.set(name, [...(rounds.get(name) ?? []), m]);
   }
+  for (const [name, list] of folded?.rounds ?? []) rounds.set(name, [...(rounds.get(name) ?? []), ...list]);
 
   // 모양을 모르는 리그는 있는 라운드만 목록으로.
   if (!how.rounds) return orderBracket([...rounds.entries()].map(([name, matchups]) => ({ name, pre: false, matchups })));
@@ -1151,6 +1237,7 @@ async function fetchPostseason(path: string, ourTeamId: string): Promise<Fetched
   const leftover = [...rounds.entries()].filter(([n]) => !used.has(n)).map(([name, matchups]) => ({ name, pre: true, matchups }));
 
   if (how.seeds === "division" && seeds) placeByDivision(main[0].matchups, seeds);
+  if (how.fromTop) placeFromTop(main);
   if (how.reseed && main[1]?.matchups.length) placeUnderNext(main[0].matchups, main[1].matchups);
 
   return [...orderBracket([...pre, ...leftover]), ...orderBracket(main)];
@@ -1239,6 +1326,120 @@ function placeByDivision(matchups: Matchup[], seeds: Seeds) {
   }
 }
 
+/** 이 팀의 포스트시즌 표 열쇠. 같은 주소라도 그룹이 따로 표를 가지면(FCS) "주소#그룹". */
+function postseasonKey(src: EspnSource): string {
+  const grouped = src.standingsGroup ? `${src.path}#${src.standingsGroup}` : null;
+  return grouped && POSTSEASON[grouped] ? grouped : src.path;
+}
+
+/**
+ * 대학 야구의 더블 일리미네이션 판을 나무의 칸으로.
+ *
+ * 네 팀 판은 늘 같은 모양이다 — 1·2경기(첫 판 둘) → 승자전·패자전 → 6경기(판 결승), 6경기에서
+ * 진 팀이 그 판 첫 패면 7경기. 그래서 **여섯 번째 경기부터가 판 결승**이다(그 두 팀의 경기).
+ *
+ * - **리저널**: 판(이름표의 "Athens Regional")마다 한 칸 = 판 결승. 판 결승 전에는 가장 최근
+ *   경기를 그 칸에 두되 **이긴 표시는 안 단다** — 그 경기를 이겨도 올라간 게 아니다. 칸의 자리는
+ *   그 판의 전국 시드(1-16, `curatedRank`)로 — 슈퍼 리저널이 1·16, 8·9 … 로 짝을 짓는 그 배치다.
+ * - **CWS**: 이름표에 판 번호가 없다. 판끼리는 결승 전까지 안 만나니 **맞붙은 팀끼리 이어서** 판을
+ *   가른다. 첫 판 둘 → "CWS Opening Round", 판 결승 → "CWS Bracket Final", 그 사이 경기는 나무
+ *   밖("CWS Bracket Games")에 — 버리면 경기가 사라진다.
+ *
+ * 리저널의 판 결승 전 경기들(판마다 너덧)은 나무에 안 올린다. 예순 장이 넘는 목록이 되고,
+ * 우리 경기는 일정에 다 있다.
+ */
+function foldPods(games: PostGame[], ourTeamId: string): { rest: PostGame[]; rounds: Map<string, Matchup[]> } {
+  const rounds = new Map<string, Matchup[]>();
+  const add = (name: string, m: Matchup | null) => {
+    if (m) rounds.set(name, [...(rounds.get(name) ?? []), m]);
+  };
+  const idsOf = (g: PostGame) => (g.comp.competitors ?? []).map((c) => c.team?.id ?? "").filter(Boolean);
+  const pairOf = (g: PostGame) => [...idsOf(g)].sort().join("-");
+  const byTime = (list: PostGame[]) => [...list].sort((a, b) => a.at.localeCompare(b.at));
+  const order = seedOrder(32);
+
+  /** 판 결승 칸. 아직이면 가장 최근 경기를 이긴 표시 없이. */
+  const finalOf = (pod: PostGame[], label: string | null, id: string): Matchup | null => {
+    const sorted = byTime(pod);
+    const decider = sorted[5];
+    const list = decider ? sorted.slice(5).filter((g) => pairOf(g) === pairOf(decider)) : null;
+    const pick = list ?? [[...sorted].reverse().find((g) => g.status === "in" || g.status === "final") ?? sorted[0]];
+    const m = toMatchup(pick, ourTeamId, null, true);
+    if (!m) return null;
+    if (!list) for (const t of m.teams) if (t) t.won = false;
+    return { ...m, id, label };
+  };
+
+  // 리저널 — 이름표의 판 이름으로.
+  const regionals = new Map<string, PostGame[]>();
+  for (const g of games) {
+    if (g.round.round !== "Regionals") continue;
+    const k = g.round.label ?? "";
+    regionals.set(k, [...(regionals.get(k) ?? []), g]);
+  }
+  for (const [label, pod] of regionals) {
+    const m = finalOf(pod, label, `regional-${label}`);
+    if (!m) continue;
+    const ranks = pod.flatMap((g) => (g.comp.competitors ?? []).map((c) => c.curatedRank?.current ?? 99)).filter((r) => r >= 1 && r <= 16);
+    const seed = ranks.length ? Math.min(...ranks) : null;
+    m.slot = seed ? Math.floor(order.indexOf(seed) / 2) : null;
+    add("Regionals", m);
+  }
+
+  // CWS — 맞붙은 팀끼리 이어 판을 가른다.
+  const cws = games.filter((g) => g.round.round === "College World Series");
+  const root = new Map<string, string>();
+  const find = (x: string): string => {
+    const r = root.get(x) ?? x;
+    return r === x ? x : find(r);
+  };
+  for (const g of cws) {
+    const [a, b] = idsOf(g);
+    if (a && b) root.set(find(a), find(b));
+  }
+  const pods = new Map<string, PostGame[]>();
+  for (const g of cws) {
+    const k = find(idsOf(g)[0] ?? "");
+    pods.set(k, [...(pods.get(k) ?? []), g]);
+  }
+  for (const [k, pod] of pods) {
+    const sorted = byTime(pod);
+    for (const g of sorted.slice(0, 2)) add("CWS Opening Round", toMatchup([g], ourTeamId, null, true));
+    for (const g of sorted.slice(2, 5)) add("CWS Bracket Games", toMatchup([g], ourTeamId, null, true));
+    if (sorted.length > 5) add("CWS Bracket Final", finalOf(pod, null, `cws-${k}`));
+  }
+
+  const rest = games.filter((g) => g.round.round !== "Regionals" && g.round.round !== "College World Series");
+  return { rest, rounds };
+}
+
+/**
+ * 시드 없는 나무(FCS)의 자리 — 결승에서부터 내려온다.
+ *
+ * 한 라운드의 매치업은 **다음 라운드 매치업의 어느 줄 팀을 냈는지**로 자리가 정해진다: 부모 자리
+ * × 2 + (위 줄이면 0, 아래 줄이면 1). 부전승 팀과 만난 1라운드 승자는 그 승자가 선 줄로 가고,
+ * 부전승 팀 줄은 빈 자리(부전승)로 남는다. 아직 다음 라운드가 없는 매치업은 비워 둔다 —
+ * 그때는 화면이 빈칸을 위에서부터 채운다.
+ */
+function placeFromTop(main: BracketRound[]) {
+  const names = (m: Matchup) => m.teams.map((t) => t?.name ?? null);
+  for (let r = main.length - 2; r >= 0; r--) {
+    const parents = main[r + 1].matchups;
+    const isLast = r + 1 === main.length - 1;
+    for (const m of main[r].matchups) {
+      const ns = names(m).filter(Boolean);
+      for (const p of parents) {
+        const pos = names(p).findIndex((n) => n && ns.includes(n));
+        const at = isLast ? 0 : p.slot;
+        if (pos !== -1 && at != null) {
+          m.slot = at * 2 + pos;
+          break;
+        }
+      }
+    }
+  }
+}
+
 const cachedPostseason = unstable_cache(fetchPostseason, ["espn-postseason"], { revalidate: TTL.live });
 
 /**
@@ -1249,5 +1450,5 @@ const cachedPostseason = unstable_cache(fetchPostseason, ["espn-postseason"], { 
  * 넘어갈 때까지) 남는다 — 우승팀은 겨울 내내 우승팀이다.
  */
 export async function espnPostseason(src: EspnSource): Promise<Fetched<BracketRound[]>> {
-  return cachedPostseason(src.path, src.teamId);
+  return cachedPostseason(postseasonKey(src), src.teamId);
 }

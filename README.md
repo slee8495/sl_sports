@@ -32,13 +32,15 @@
 | 팀 | 리그 | 출처 |
 | --- | --- | --- |
 | UC San Diego Tritons | Big West 농구 | ESPN |
+| UC San Diego Tritons | Big West 야구 | ESPN |
 | UC Irvine Anteaters | Big West 농구 | ESPN |
+| UC Irvine Anteaters | Big West 야구 | ESPN |
 | Stanford Cardinal | ACC 풋볼 | ESPN |
 | Stanford Cardinal | ACC 농구 | ESPN |
+| Stanford Cardinal | ACC 야구 | ESPN |
 | Harvard Crimson | Ivy League 풋볼 (FCS) | ESPN |
 | Harvard Crimson | Ivy League 농구 | ESPN |
-| Duke Blue Devils | ACC 풋볼 | ESPN |
-| Duke Blue Devils | ACC 농구 | ESPN |
+| Harvard Crimson | Ivy League 야구 | ESPN |
 
 **London**
 

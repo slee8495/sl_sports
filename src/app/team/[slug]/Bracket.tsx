@@ -45,6 +45,11 @@ function shortRound(name: string): string {
     .replace(/^Championship Series$/, "LCS")
     .replace(/^Division Series$/, "Division")
     .replace(/^Wild Card Series$/, "Wild Card")
+    .replace(/^First Round$/, "1st Round")
+    .replace(/^Second Round$/, "2nd Round")
+    .replace(/^Super Regionals$/, "Supers")
+    .replace(/^CWS Opening Round$/, "CWS")
+    .replace(/^CWS Bracket Final$/, "CWS Semis")
     .replace(/^Quarterfinals?$/, "Quarters")
     .replace(/^Semifinals?$/, "Semis");
 }
