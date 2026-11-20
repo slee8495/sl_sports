@@ -824,6 +824,12 @@ const POSTSEASON: Record<string, PostseasonHow> = {
   },
   // 리그전뿐이다. 포스트시즌이 없다(types/3 이 404).
   "soccer/eng.1": { by: "day", none: true },
+  /*
+    대학 야구 토너먼트는 64팀이 지역 예선(더블 일리미네이션) → 슈퍼 리저널 → CWS 로 간다.
+    이 나무는 위의 모양으로 안 그려지고, 날짜별로 다 읽으면 디비전 I 전체 경기가 쏟아진다.
+    브래킷 탭은 안 띄운다 — 우리 경기는 일정에 그대로 뜬다.
+  */
+  "baseball/college-baseball": { by: "day", none: true },
 };
 
 type Round = { round: string; group: string | null; label: string | null };
